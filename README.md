@@ -39,16 +39,22 @@ You will need **TWO** connection strings from Supabase:
 
 ---
 
-### Step 2: Push Database Schema to Supabase
+### Step 2: Initialize Database on Supabase
 
-In your local workspace terminal, initialize the 14 tables in your Supabase database:
+You can initialize your database using either the **Supabase Web SQL Editor** (recommended) or the **Prisma CLI**:
 
-1. Update `server/.env` with your Supabase credentials:
+#### Option A: Supabase Web SQL Editor (Recommended – Zero CLI Setup)
+1. Open the file [`supabase.sql`](file:///d:/invoiceP/supabase.sql) located at the root of this repository and copy all its contents.
+2. In your [Supabase Dashboard](https://supabase.com/dashboard), click on **SQL Editor** in the left navigation sidebar.
+3. Click **New query**, paste the SQL script into the query editor, and click **Run** (or press `Ctrl+Enter`).
+4. That's it! All 14 tables, UUID defaults, performance indexes, foreign key cascades, and demo seed data are instantly created. You can verify everything in the **Table Editor**!
+
+#### Option B: Via Terminal using Prisma CLI
+1. Update `server/.env` with your Supabase connection strings:
    ```env
    DATABASE_URL="postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true"
    DIRECT_URL="postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres"
    ```
-
 2. Run the push and seed commands:
    ```bash
    # Push schema to Supabase (creates all 14 tables with indexes and constraints)
@@ -57,8 +63,6 @@ In your local workspace terminal, initialize the 14 tables in your Supabase data
    # (Optional) Seed initial demo business, user, customer, products, and invoices
    npm run db:seed
    ```
-
-3. You can verify your tables in the **Supabase Table Editor** in your web browser!
 
 ---
 
