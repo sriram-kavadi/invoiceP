@@ -1,0 +1,386 @@
+// InvoiceHub - Prisma Schema
+// PostgreSQL + Multi-tenant architecture
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── USERS ───────────────────────────────────────────────────────────────────
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  passwordHash    String
+  name            String
+  phone           String?
+  isEmailVerified Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  businesses      BusinessUser[]
+  sessions        Session[]
+  passwordResets  PasswordReset[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
+
+// ─── BUSINESSES ──────────────────────────────────────────────────────────────
+
+model Business {
+  id                   String       @id @default(uuid())
+  name                 String
+  businessType         String?
+  address              String?
+  city                 String?
+  state                String?
+  stateCode            String?
+  pincode              String?
+  country              String       @default("India")
+  phone                String?
+  email                String?
+  website              String?
+  gstin                String?
+  pan                  String?
+  isGstRegistered      Boolean      @default(false)
+  logoPath             String?
+  authorizedSignatory  String?
+  jurisdiction         String?
+  declaration          String?      @default("We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.")
+  onboardingCompleted  Boolean      @default(false)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  users           BusinessUser[]
+  settings        BusinessSettings?
+  bankAccounts    BusinessBankAccount[]
+  customers       Customer[]
+  products        Product[]
+  invoices        Invoice[]
+  invoiceSequences InvoiceSequence[]
+}
+
+model BusinessUser {
+  id         String   @id @default(uuid())
+  userId     String
+  businessId String
+  role       String   @default("OWNER") // OWNER, ADMIN, STAFF
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId])
+  @@index([userId])
+  @@index([businessId])
+}
+
+model BusinessSettings {
+  id                     String   @id @default(uuid())
+  businessId             String   @unique
+  defaultPaymentTerms    String?
+  defaultGstType         String   @default("INTRASTATE") // INTRASTATE, INTERSTATE
+  invoicePrefix          String   @default("INV")
+  invoiceNumberFormat    String   @default("PREFIX/FY/NUM") // e.g. INV/2526/001
+  roundOffEnabled        Boolean  @default(true)
+  defaultDueDays         Int      @default(30)
+  showBankDetails        Boolean  @default(true)
+  showSignature          Boolean  @default(true)
+  showFooterNote         Boolean  @default(true)
+  footerNote             String?  @default("This is a Computer Generated Invoice")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  business               Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model BusinessBankAccount {
+  id              String   @id @default(uuid())
+  businessId      String
+  accountHolder   String
+  bankName        String
+  accountNumber   String
+  ifscCode        String
+  branch          String?
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+// ─── CUSTOMERS ───────────────────────────────────────────────────────────────
+
+model Customer {
+  id              String   @id @default(uuid())
+  businessId      String
+  name            String
+  customerType    String?  // INDIVIDUAL, BUSINESS
+  gstin           String?
+  pan             String?
+  billingAddress  String?
+  billingCity     String?
+  billingState    String?
+  billingStateCode String?
+  billingPincode  String?
+  shippingAddress  String?
+  shippingCity     String?
+  shippingState    String?
+  shippingStateCode String?
+  shippingPincode  String?
+  sameAsShipping  Boolean  @default(true)
+  contactPerson   String?
+  phone           String?
+  email           String?
+  notes           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoices        Invoice[]
+
+  @@index([businessId])
+  @@index([businessId, name])
+}
+
+// ─── PRODUCTS ────────────────────────────────────────────────────────────────
+
+model Product {
+  id              String   @id @default(uuid())
+  businessId      String
+  name            String
+  sku             String?
+  description     String?
+  hsnSacCode      String?
+  unit            String   @default("PCS") // PCS, KG, BOX, WAL, LTR, etc.
+  sellingPrice    Decimal  @db.Decimal(15, 4)
+  gstRate         Decimal  @db.Decimal(5, 2) @default(0)
+  taxClassification String @default("TAXABLE") // TAXABLE, EXEMPT, NIL_RATED, NON_GST
+  defaultDiscount Decimal  @db.Decimal(5, 2) @default(0)
+  isService       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business        Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoiceItems    InvoiceItem[]
+
+  @@index([businessId])
+  @@index([businessId, name])
+}
+
+// ─── INVOICE SEQUENCES ───────────────────────────────────────────────────────
+
+model InvoiceSequence {
+  id            String   @id @default(uuid())
+  businessId    String
+  prefix        String   @default("INV")
+  financialYear String   // e.g. "2526" for 2025-26
+  currentNumber Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, prefix, financialYear])
+  @@index([businessId])
+}
+
+// ─── INVOICES ────────────────────────────────────────────────────────────────
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+}
+
+model Invoice {
+  id                   String        @id @default(uuid())
+  businessId           String
+  customerId           String?
+  invoiceNumber        String
+  invoiceType          String        @default("GST") // GST, NON_GST
+  gstType              String        @default("INTRASTATE") // INTRASTATE, INTERSTATE
+  status               InvoiceStatus @default(DRAFT)
+  paymentStatus        PaymentStatus @default(UNPAID)
+
+  // Dates
+  invoiceDate          DateTime      @default(now())
+  dueDate              DateTime?
+  deliveryNoteDate     DateTime?
+
+  // Invoice fields
+  deliveryNote         String?
+  paymentTerms         String?
+  referenceNumber      String?
+  referenceDate        DateTime?
+  otherReferences      String?
+  buyerOrderNumber     String?
+  buyerOrderDate       DateTime?
+  dispatchDocNumber    String?
+  dispatchedThrough    String?
+  destination          String?
+  termsOfDelivery      String?
+
+  // Snapshot of seller info at time of issue
+  sellerSnapshot       Json?
+  // Snapshot of buyer/consignee info at time of issue
+  customerSnapshot     Json?
+
+  // Financial summary (server-calculated, stored for performance)
+  subtotal             Decimal       @db.Decimal(15, 2) @default(0)
+  totalDiscount        Decimal       @db.Decimal(15, 2) @default(0)
+  taxableAmount        Decimal       @db.Decimal(15, 2) @default(0)
+  cgstAmount           Decimal       @db.Decimal(15, 2) @default(0)
+  sgstAmount           Decimal       @db.Decimal(15, 2) @default(0)
+  igstAmount           Decimal       @db.Decimal(15, 2) @default(0)
+  totalTax             Decimal       @db.Decimal(15, 2) @default(0)
+  roundOff             Decimal       @db.Decimal(15, 2) @default(0)
+  grandTotal           Decimal       @db.Decimal(15, 2) @default(0)
+  totalPaid            Decimal       @db.Decimal(15, 2) @default(0)
+  outstandingAmount    Decimal       @db.Decimal(15, 2) @default(0)
+
+  // Shipped/billed quantity totals
+  totalShippedQty      Decimal       @db.Decimal(15, 3) @default(0)
+  totalBilledQty       Decimal       @db.Decimal(15, 3) @default(0)
+
+  cancelReason         String?
+  cancelledAt          DateTime?
+  issuedAt             DateTime?
+  pdfPath              String?
+  shareToken           String?       @unique
+
+  notes                String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  business             Business      @relation(fields: [businessId], references: [id])
+  customer             Customer?     @relation(fields: [customerId], references: [id])
+  items                InvoiceItem[]
+  payments             Payment[]
+  auditLogs            InvoiceAuditLog[]
+  files                InvoiceFile[]
+
+  @@unique([businessId, invoiceNumber])
+  @@index([businessId])
+  @@index([businessId, status])
+  @@index([businessId, paymentStatus])
+  @@index([customerId])
+  @@index([shareToken])
+}
+
+model InvoiceItem {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  productId       String?
+  slNo            Int
+  description     String
+  hsnSacCode      String?
+  gstRate         Decimal  @db.Decimal(5, 2) @default(0)
+  taxClassification String @default("TAXABLE")
+  shippedQty      Decimal  @db.Decimal(15, 3)
+  billedQty       Decimal  @db.Decimal(15, 3)
+  unit            String   @default("PCS")
+  rate            Decimal  @db.Decimal(15, 4)
+  discountPercent Decimal  @db.Decimal(5, 2) @default(0)
+  discountAmount  Decimal  @db.Decimal(15, 2) @default(0)
+  taxableAmount   Decimal  @db.Decimal(15, 2) @default(0)
+  cgstRate        Decimal  @db.Decimal(5, 2) @default(0)
+  cgstAmount      Decimal  @db.Decimal(15, 2) @default(0)
+  sgstRate        Decimal  @db.Decimal(5, 2) @default(0)
+  sgstAmount      Decimal  @db.Decimal(15, 2) @default(0)
+  igstRate        Decimal  @db.Decimal(5, 2) @default(0)
+  igstAmount      Decimal  @db.Decimal(15, 2) @default(0)
+  amount          Decimal  @db.Decimal(15, 2)
+  createdAt       DateTime @default(now())
+
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product         Product? @relation(fields: [productId], references: [id])
+
+  @@index([invoiceId])
+}
+
+// ─── PAYMENTS ────────────────────────────────────────────────────────────────
+
+model Payment {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  amount          Decimal  @db.Decimal(15, 2)
+  paymentDate     DateTime
+  paymentMethod   String   // CASH, UPI, BANK_TRANSFER, CHEQUE, OTHER
+  transactionRef  String?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+// ─── AUDIT & FILES ───────────────────────────────────────────────────────────
+
+model InvoiceAuditLog {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  action      String   // CREATED, ISSUED, EDITED, CANCELLED, PAYMENT_RECORDED, PDF_GENERATED
+  details     Json?
+  performedBy String?
+  createdAt   DateTime @default(now())
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model InvoiceFile {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  fileType    String   // PDF
+  filePath    String
+  fileSize    Int?
+  createdAt   DateTime @default(now())
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
