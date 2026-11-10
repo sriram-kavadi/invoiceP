@@ -1,5 +1,6 @@
 import prisma from '../../config/database.js';
 import { success } from '../../utils/response.js';
+import { Prisma } from '@prisma/client';
 
 export const getSummary = async (req, res, next) => {
   try {
@@ -53,30 +54,51 @@ export const getSummary = async (req, res, next) => {
       status: { not: 'CANCELLED' },
     };
 
+    // Six months ago for monthly chart
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    // Run all queries in parallel — no sequential awaits
     const [
-      invoices,
+      kpiAgg,
+      gstAgg,
+      nonGstAgg,
       totalCustomers,
       totalProducts,
       recentInvoices,
-      allInvoicesForTopCustomers,
+      topCustomersRaw,
+      monthlySalesRaw,
     ] = await Promise.all([
-      prisma.invoice.findMany({
+      // KPI: aggregate instead of fetching all rows into JS
+      prisma.invoice.aggregate({
         where: invoiceWhere,
-        select: {
+        _sum: {
           grandTotal: true,
           totalPaid: true,
           outstandingAmount: true,
-          paymentStatus: true,
-          invoiceType: true,
-          status: true,
         },
+        _count: { id: true },
       }),
+
+      // GST sales total
+      prisma.invoice.aggregate({
+        where: { ...invoiceWhere, invoiceType: 'GST' },
+        _sum: { grandTotal: true },
+      }),
+
+      // Non-GST sales total
+      prisma.invoice.aggregate({
+        where: { ...invoiceWhere, invoiceType: { not: 'GST' } },
+        _sum: { grandTotal: true },
+      }),
+
       prisma.customer.count({
         where: { businessId, isActive: true },
       }),
+
       prisma.product.count({
         where: { businessId, isActive: true },
       }),
+
       prisma.invoice.findMany({
         where: { businessId },
         take: 10,
@@ -95,100 +117,82 @@ export const getSummary = async (req, res, next) => {
           },
         },
       }),
-      prisma.invoice.findMany({
-        where: { businessId, status: { not: 'CANCELLED' }, customerId: { not: null } },
-        select: {
-          customerId: true,
-          grandTotal: true,
-          customer: { select: { id: true, name: true } },
-        },
-      }),
+
+      // Top 5 customers — single SQL GROUP BY, no JS aggregation
+      prisma.$queryRaw`
+        SELECT c.id, c.name,
+               COUNT(i.id)::int AS "invoiceCount",
+               COALESCE(SUM(i."grandTotal"), 0)::float AS "totalAmount"
+        FROM "Invoice" i
+        JOIN "Customer" c ON c.id = i."customerId"
+        WHERE i."businessId" = ${businessId}
+          AND i.status != 'CANCELLED'
+          AND i."customerId" IS NOT NULL
+        GROUP BY c.id, c.name
+        ORDER BY "totalAmount" DESC
+        LIMIT 5
+      `,
+
+      // Monthly sales — single SQL GROUP BY replaces the 6-iteration loop
+      prisma.$queryRaw`
+        SELECT date_trunc('month', "invoiceDate") AS month,
+               COUNT(*)::int AS "invoiceCount",
+               COALESCE(SUM("grandTotal"), 0)::float AS "totalSales"
+        FROM "Invoice"
+        WHERE "businessId" = ${businessId}
+          AND status != 'CANCELLED'
+          AND "invoiceDate" >= ${sixMonthsAgo}
+        GROUP BY 1
+        ORDER BY 1
+      `,
     ]);
 
-    let totalSales = 0;
-    let paidAmount = 0;
-    let pendingAmount = 0;
-    let partiallyPaidAmount = 0;
-    let gstSales = 0;
-    let nonGstSales = 0;
+    // Calculate pending amounts from KPI aggregation
+    // We need partiallyPaidAmount — requires a targeted query (but fast, aggregate only)
+    const partiallyPaidAgg = await prisma.invoice.aggregate({
+      where: { ...invoiceWhere, paymentStatus: 'PARTIALLY_PAID' },
+      _sum: { outstandingAmount: true },
+    });
 
-    for (const inv of invoices) {
-      const gTotal = Number(inv.grandTotal);
-      const paid = Number(inv.totalPaid);
-      const outstanding = Number(inv.outstandingAmount);
+    const totalSales = Number(kpiAgg._sum.grandTotal || 0);
+    const paidAmount = Number(kpiAgg._sum.totalPaid || 0);
+    const pendingAmount = Number(kpiAgg._sum.outstandingAmount || 0);
+    const partiallyPaidAmount = Number(partiallyPaidAgg._sum.outstandingAmount || 0);
+    const gstSales = Number(gstAgg._sum.grandTotal || 0);
+    const nonGstSales = Number(nonGstAgg._sum.grandTotal || 0);
 
-      totalSales += gTotal;
-      paidAmount += paid;
-      if (inv.paymentStatus === 'PARTIALLY_PAID') {
-        partiallyPaidAmount += outstanding;
-        pendingAmount += outstanding;
-      } else if (inv.paymentStatus === 'UNPAID') {
-        pendingAmount += outstanding;
-      }
-
-      if (inv.invoiceType === 'GST') {
-        gstSales += gTotal;
-      } else {
-        nonGstSales += gTotal;
-      }
-    }
-
-    // Top 5 customers by revenue
-    const customerMap = {};
-    for (const inv of allInvoicesForTopCustomers) {
-      if (!inv.customer) continue;
-      const cId = inv.customer.id;
-      if (!customerMap[cId]) {
-        customerMap[cId] = {
-          id: cId,
-          name: inv.customer.name,
-          totalAmount: 0,
-          invoiceCount: 0,
-        };
-      }
-      customerMap[cId].totalAmount += Number(inv.grandTotal);
-      customerMap[cId].invoiceCount += 1;
-    }
-
-    const topCustomers = Object.values(customerMap)
-      .sort((a, b) => b.totalAmount - a.totalAmount)
-      .slice(0, 5);
-
-    // Monthly sales for the last 6 months
+    // Build a complete 6-month array, filling in zeros for months with no data
     const monthlySales = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mStart = new Date(d.getFullYear(), d.getMonth(), 1);
-      const mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
       const monthLabel = d.toLocaleString('en-IN', { month: 'short', year: '2-digit' });
-
-      const monthInvoices = await prisma.invoice.findMany({
-        where: {
-          businessId,
-          status: { not: 'CANCELLED' },
-          invoiceDate: { gte: mStart, lte: mEnd },
-        },
-        select: { grandTotal: true },
+      // Match against the raw SQL result
+      const rawRow = monthlySalesRaw.find((r) => {
+        const rowDate = new Date(r.month);
+        return rowDate.getFullYear() === d.getFullYear() && rowDate.getMonth() === d.getMonth();
       });
-
-      const mTotal = monthInvoices.reduce((sum, inv) => sum + Number(inv.grandTotal), 0);
       monthlySales.push({
         month: monthLabel,
-        totalSales: mTotal,
-        invoiceCount: monthInvoices.length,
+        totalSales: rawRow ? Number(rawRow.totalSales) : 0,
+        invoiceCount: rawRow ? Number(rawRow.invoiceCount) : 0,
       });
     }
 
     return success(res, {
       totalSales,
-      totalInvoices: invoices.length,
+      totalInvoices: kpiAgg._count.id,
       paidAmount,
       pendingAmount,
       partiallyPaidAmount,
       totalCustomers,
       totalProducts,
       recentInvoices,
-      topCustomers,
+      topCustomers: topCustomersRaw.map((r) => ({
+        id: r.id,
+        name: r.name,
+        invoiceCount: Number(r.invoiceCount),
+        totalAmount: Number(r.totalAmount),
+      })),
       monthlySales,
       gstVsNonGstSales: {
         gstSales,

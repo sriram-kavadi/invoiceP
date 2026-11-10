@@ -17,12 +17,16 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 import reportRoutes from './modules/reports/reports.routes.js';
 import fileRoutes from './modules/files/files.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { timingMiddleware } from './middleware/timing.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Performance timing (before all other middleware)
+app.use(timingMiddleware);
 
 // Security middleware
 app.use(helmet({

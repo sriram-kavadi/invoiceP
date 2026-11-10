@@ -7,13 +7,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'changeme_secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 /**
- * Sign a JWT for a given userId.
+ * Sign a JWT for a given userId and optional businessId.
+ * Embedding businessId avoids a DB round-trip in tenant middleware on every request.
  * @param {string} userId
+ * @param {string|null} [businessId] - primary business id to embed in token
  * @returns {string} signed JWT token
  */
-export function generateToken(userId) {
-  // Include both `sub` (standard) and `id` (legacy compat with auth middleware)
-  return jwt.sign({ sub: userId, id: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+export function generateToken(userId, businessId = null) {
+  const payload = { sub: userId, id: userId };
+  if (businessId) payload.businessId = businessId;
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 /**

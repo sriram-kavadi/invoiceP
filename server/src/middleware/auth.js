@@ -31,6 +31,8 @@ export const authenticate = (req, res, next) => {
       id: decoded.id,
       email: decoded.email,
       name: decoded.name,
+      // businessId embedded at login time to skip DB lookup in tenant middleware
+      businessId: decoded.businessId || null,
     };
     next();
   } catch (err) {
@@ -59,6 +61,7 @@ export const optionalAuth = (req, res, next) => {
       id: decoded.id,
       email: decoded.email,
       name: decoded.name,
+      businessId: decoded.businessId || null,
     };
   } catch {
     req.user = null;

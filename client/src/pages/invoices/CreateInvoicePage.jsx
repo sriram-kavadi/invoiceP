@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   Plus,
@@ -220,9 +220,9 @@ export default function CreateInvoicePage() {
     }
   };
 
-  // Calculated Totals
+  // Calculated Totals (memoized to avoid recalculation on unrelated keystrokes)
   const effectiveGstType = invoiceType === 'NON_GST' ? 'NON_GST' : gstType;
-  const totals = calculateTotals(items, effectiveGstType, true);
+  const totals = useMemo(() => calculateTotals(items, effectiveGstType, true), [items, effectiveGstType]);
 
   // Payload Builder
   const buildPayload = () => {

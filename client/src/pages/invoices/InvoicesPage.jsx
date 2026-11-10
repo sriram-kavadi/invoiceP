@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Eye, Download, CreditCard, XCircle, Copy, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Pagination from '../../components/ui/Pagination';
@@ -10,13 +12,13 @@ import PaymentModal from '../../components/ui/PaymentModal';
 import Modal from '../../components/ui/Modal';
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState([]);
-  const [search, setSearch] = useState('');
+  const { business } = useAuth();
+  const queryClient = useQueryClient();
+  const [searchInput, setSearchInput] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
 
   // Modal states
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState(null);
@@ -24,33 +26,28 @@ export default function InvoicesPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
-  const fetchInvoices = async () => {
-    setLoading(true);
-    try {
-      let url = `/invoices?page=${page}&limit=15&search=${encodeURIComponent(search)}`;
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['invoices', business?.id, page, statusFilter, paymentStatusFilter, submittedSearch],
+    queryFn: async () => {
+      let url = `/invoices?page=${page}&limit=15&search=${encodeURIComponent(submittedSearch)}`;
       if (statusFilter) url += `&status=${statusFilter}`;
       if (paymentStatusFilter) url += `&paymentStatus=${paymentStatusFilter}`;
 
       const res = await api.get(url);
-      if (res.data.success) {
-        setInvoices(res.data.data.invoices);
-        setPagination(res.data.data.pagination);
-      }
-    } catch (err) {
-      toast.error('Failed to load invoices');
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (res.data.success) return res.data.data;
+      throw new Error(res.data.message || 'Failed to load invoices');
+    },
+    enabled: !!business?.id,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
 
-  useEffect(() => {
-    fetchInvoices();
-  }, [page, statusFilter, paymentStatusFilter]);
+  const invoices = data?.invoices || [];
+  const pagination = data?.pagination || { total: 0, totalPages: 1 };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchInvoices();
+    setSubmittedSearch(searchInput);
   };
 
   const handleDownloadPdf = async (id, invoiceNumber) => {
@@ -75,7 +72,8 @@ export default function InvoicesPage() {
       const res = await api.post(`/invoices/${id}/duplicate`);
       if (res.data.success) {
         toast.success('Invoice duplicated as new draft');
-        fetchInvoices();
+        queryClient.invalidateQueries({ queryKey: ['invoices'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       }
     } catch (err) {
       toast.error('Failed to duplicate invoice');
@@ -98,7 +96,8 @@ export default function InvoicesPage() {
         toast.success('Invoice cancelled');
         setCancelModalInvoice(null);
         setCancelReason('');
-        fetchInvoices();
+        queryClient.invalidateQueries({ queryKey: ['invoices'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to cancel invoice');
@@ -167,8 +166,8 @@ export default function InvoicesPage() {
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search by invoice number or customer name..."
               className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
@@ -317,7 +316,10 @@ export default function InvoicesPage() {
           isOpen={!!selectedInvoiceForPayment}
           onClose={() => setSelectedInvoiceForPayment(null)}
           invoice={selectedInvoiceForPayment}
-          onSuccess={() => fetchInvoices()}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['invoices'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+          }}
         />
       )}
 

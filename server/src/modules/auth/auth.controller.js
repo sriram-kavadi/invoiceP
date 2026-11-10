@@ -83,10 +83,6 @@ export async function register(req, res) {
       return newUser;
     });
 
-    const token = generateToken(user.id);
-    await createSession(user.id, token);
-    setTokenCookie(res, token);
-
     // Reload user with business relations for the response
     const fullUser = await prisma.user.findUnique({
       where: { id: user.id },
@@ -99,6 +95,11 @@ export async function register(req, res) {
 
     const sanitized = sanitizeUser(fullUser);
     const primaryBusiness = sanitized.businesses?.[0]?.business || null;
+
+    // Embed businessId in JWT so tenant middleware skips DB on every request
+    const token = generateToken(user.id, primaryBusiness?.id || null);
+    await createSession(user.id, token);
+    setTokenCookie(res, token);
 
     return res.status(201).json({
       success: true,
@@ -158,12 +159,13 @@ export async function login(req, res) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
-    const token = generateToken(user.id);
-    await createSession(user.id, token);
-    setTokenCookie(res, token);
-
     const sanitized = sanitizeUser(user);
     const primaryBusiness = sanitized.businesses?.[0]?.business || null;
+
+    // Embed businessId in JWT so tenant middleware skips DB on every request
+    const token = generateToken(user.id, primaryBusiness?.id || null);
+    await createSession(user.id, token);
+    setTokenCookie(res, token);
 
     return res.status(200).json({
       success: true,
@@ -372,9 +374,39 @@ export async function getMe(req, res) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        isEmailVerified: true,
+        createdAt: true,
         businesses: {
-          include: { business: true },
+          take: 1,
+          select: {
+            role: true,
+            business: {
+              select: {
+                id: true,
+                name: true,
+                address: true,
+                city: true,
+                state: true,
+                stateCode: true,
+                pincode: true,
+                phone: true,
+                email: true,
+                gstin: true,
+                pan: true,
+                businessType: true,
+                isGstRegistered: true,
+                onboardingCompleted: true,
+                authorizedSignatory: true,
+                jurisdiction: true,
+                declaration: true,
+              },
+            },
+          },
         },
       },
     });
@@ -383,15 +415,15 @@ export async function getMe(req, res) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const sanitized = sanitizeUser(user);
-    const primaryBusiness = sanitized.businesses?.[0]?.business || null;
+    const primaryBusiness = user.businesses?.[0]?.business || null;
+    const { businesses: _biz, ...userWithoutBiz } = user;
 
     return res.status(200).json({
       success: true,
-      user: sanitized,
+      user: userWithoutBiz,
       business: primaryBusiness,
       data: {
-        user: sanitized,
+        user: userWithoutBiz,
         business: primaryBusiness,
       },
     });

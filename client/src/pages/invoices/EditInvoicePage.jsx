@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, FileCheck, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -148,7 +148,7 @@ export default function EditInvoicePage() {
   }
 
   const effectiveGstType = invoiceType === 'NON_GST' ? 'NON_GST' : gstType;
-  const totals = calculateTotals(items, effectiveGstType, true);
+  const totals = useMemo(() => calculateTotals(items, effectiveGstType, true), [items, effectiveGstType]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

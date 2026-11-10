@@ -1,52 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Download, Calendar, BarChart3, TrendingUp, IndianRupee } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Pagination from '../../components/ui/Pagination';
 
 export default function ReportsPage() {
-  const [data, setData] = useState({ invoices: [], totals: {} });
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const { business } = useAuth();
+  const [startDateInput, setStartDateInput] = useState('');
+  const [endDateInput, setEndDateInput] = useState('');
+  const [activeStartDate, setActiveStartDate] = useState('');
+  const [activeEndDate, setActiveEndDate] = useState('');
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
 
-  const fetchReports = async () => {
-    setLoading(true);
-    try {
+  const { data: reportData, isLoading: loading } = useQuery({
+    queryKey: ['salesReport', business?.id, page, activeStartDate, activeEndDate],
+    queryFn: async () => {
       let url = `/reports/sales?page=${page}&limit=15`;
-      if (startDate) url += `&startDate=${startDate}`;
-      if (endDate) url += `&endDate=${endDate}`;
-
+      if (activeStartDate) url += `&startDate=${activeStartDate}`;
+      if (activeEndDate) url += `&endDate=${activeEndDate}`;
       const res = await api.get(url);
-      if (res.data.success) {
-        setData(res.data.data);
-        setPagination(res.data.data.pagination);
-      }
-    } catch (err) {
-      toast.error('Failed to load reports');
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (res.data.success) return res.data.data;
+      throw new Error(res.data.message || 'Failed to load reports');
+    },
+    enabled: !!business?.id,
+    staleTime: 1000 * 60 * 3,
+  });
 
-  useEffect(() => {
-    fetchReports();
-  }, [page]);
+  const data = reportData || { invoices: [], totals: {} };
+  const pagination = reportData?.pagination || { total: 0, totalPages: 1 };
 
   const handleApplyFilter = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchReports();
+    setActiveStartDate(startDateInput);
+    setActiveEndDate(endDateInput);
   };
 
   const handleExportSales = async () => {
     try {
       let url = '/reports/sales/export?';
-      if (startDate) url += `startDate=${startDate}&`;
-      if (endDate) url += `endDate=${endDate}&`;
+      if (activeStartDate) url += `startDate=${activeStartDate}&`;
+      if (activeEndDate) url += `endDate=${activeEndDate}&`;
 
       const res = await api.get(url, { responseType: 'blob' });
       const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
@@ -88,8 +85,8 @@ export default function ReportsPage() {
             </label>
             <input
               type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={startDateInput}
+              onChange={(e) => setStartDateInput(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -99,24 +96,25 @@ export default function ReportsPage() {
             </label>
             <input
               type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              value={endDateInput}
+              onChange={(e) => setEndDateInput(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <Button type="submit" size="sm">
             Apply Filter
           </Button>
-          {(startDate || endDate) && (
+          {(activeStartDate || activeEndDate || startDateInput || endDateInput) && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => {
-                setStartDate('');
-                setEndDate('');
+                setStartDateInput('');
+                setEndDateInput('');
+                setActiveStartDate('');
+                setActiveEndDate('');
                 setPage(1);
-                fetchReports();
               }}
             >
               Reset

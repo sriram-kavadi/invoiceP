@@ -9,6 +9,27 @@ import { error } from '../utils/response.js';
  * Returns null if the user has no business yet (onboarding flow).
  */
 const resolveBusinessId = async (req, res) => {
+  // Fast path: businessId was embedded in the JWT at login time (new tokens).
+  // For single-business users this avoids a DB round-trip on every request.
+  if (req.user.businessId) {
+    // Multi-business override: if client explicitly passes a header AND it differs
+    // from the embedded one, we must verify they actually have access.
+    const headerBusinessId = req.headers['x-business-id'];
+    if (headerBusinessId && headerBusinessId !== req.user.businessId) {
+      // Fall through to DB to verify membership for the requested business
+      const membership = await prisma.businessUser.findFirst({
+        where: { userId: req.user.id, businessId: headerBusinessId },
+        select: { businessId: true },
+      });
+      if (!membership) {
+        return { __error: 'You do not have access to the specified business.', status: 403 };
+      }
+      return headerBusinessId;
+    }
+    return req.user.businessId;
+  }
+
+  // Slow path: old token without businessId claim — fall back to DB lookup
   const memberships = await prisma.businessUser.findMany({
     where: { userId: req.user.id },
     select: { businessId: true },

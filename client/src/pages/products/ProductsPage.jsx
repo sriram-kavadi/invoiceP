@@ -1,41 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Edit2, Trash2, Download, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Pagination from '../../components/ui/Pagination';
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([]);
-  const [search, setSearch] = useState('');
+  const { business } = useAuth();
+  const queryClient = useQueryClient();
+  const [searchInput, setSearchInput] = useState('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
 
-  const fetchProducts = async (p = page, q = search) => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/products?page=${p}&limit=15&search=${encodeURIComponent(q)}`);
-      if (res.data.success) {
-        setProducts(res.data.data.products);
-        setPagination(res.data.data.pagination);
-      }
-    } catch (err) {
-      toast.error('Failed to load products');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['products', business?.id, page, submittedSearch],
+    queryFn: async () => {
+      const res = await api.get(`/products?page=${page}&limit=15&search=${encodeURIComponent(submittedSearch)}`);
+      if (res.data.success) return res.data.data;
+      throw new Error(res.data.message || 'Failed to load products');
+    },
+    enabled: !!business?.id,
+    staleTime: 1000 * 60 * 3, // 3 minutes
+  });
 
-  useEffect(() => {
-    fetchProducts(page, search);
-  }, [page]);
+  const products = data?.products || [];
+  const pagination = data?.pagination || { total: 0, totalPages: 1 };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
-    fetchProducts(1, search);
+    setSubmittedSearch(searchInput);
   };
 
   const handleDelete = async (id, name) => {
@@ -47,7 +44,8 @@ export default function ProductsPage() {
       const res = await api.delete(`/products/${id}`);
       if (res.data.success) {
         toast.success('Product deleted');
-        fetchProducts(page, search);
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete product');
@@ -99,8 +97,8 @@ export default function ProductsPage() {
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search by product name, SKU, or HSN/SAC code..."
               className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
             />

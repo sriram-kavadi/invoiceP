@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   TrendingUp,
   FileText,
@@ -13,33 +14,31 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import PaymentModal from '../../components/ui/PaymentModal';
 
 export default function DashboardPage() {
+  const { business } = useAuth();
+  const queryClient = useQueryClient();
   const [period, setPeriod] = useState('THIS_MONTH');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState(null);
 
-  const fetchSummary = async (p = period) => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/dashboard/summary?period=${p}`);
-      if (res.data.success) {
-        setData(res.data.data);
-      }
-    } catch (err) {
-      toast.error('Failed to load dashboard summary');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard', business?.id, period],
+    queryFn: async () => {
+      const res = await api.get(`/dashboard/summary?period=${period}`);
+      if (res.data.success) return res.data.data;
+      throw new Error(res.data.message || 'Failed to load dashboard');
+    },
+    enabled: !!business?.id,
+    staleTime: 1000 * 60 * 2,     // 2 minutes — fresh enough for a dashboard
+    gcTime: 1000 * 60 * 10,       // keep in cache for 10 minutes
+    onError: () => toast.error('Failed to load dashboard summary'),
+  });
 
-  useEffect(() => {
-    fetchSummary(period);
-  }, [period]);
+  const loading = isLoading;
 
   const periods = [
     { label: 'Today', value: 'TODAY' },
@@ -369,7 +368,10 @@ export default function DashboardPage() {
           isOpen={!!selectedInvoiceForPayment}
           onClose={() => setSelectedInvoiceForPayment(null)}
           invoice={selectedInvoiceForPayment}
-          onSuccess={() => fetchSummary()}
+          onSuccess={() => {
+            // Invalidate dashboard cache so it refetches fresh data
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+          }}
         />
       )}
     </div>

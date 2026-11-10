@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext(null);
@@ -13,9 +13,14 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
   const [isLoading, setIsLoading] = useState(true);
+  // Ref guard: prevents double-invocation of checkAuth in React.StrictMode dev
+  const authCheckRef = useRef(false);
 
   // Restore session on mount
   useEffect(() => {
+    if (authCheckRef.current) return;
+    authCheckRef.current = true;
+
     const checkAuth = async () => {
       const token = localStorage.getItem('invoicehub_token');
       if (!token) {

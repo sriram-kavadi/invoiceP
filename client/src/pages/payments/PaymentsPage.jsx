@@ -1,39 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Search, Download, CreditCard, Landmark, Banknote } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Pagination from '../../components/ui/Pagination';
 
 export default function PaymentsPage() {
-  const [payments, setPayments] = useState([]);
+  const { business } = useAuth();
   const [methodFilter, setMethodFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
 
-  const fetchPayments = async () => {
-    setLoading(true);
-    try {
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['payments', business?.id, page, methodFilter],
+    queryFn: async () => {
       let url = `/payments?page=${page}&limit=15`;
       if (methodFilter) url += `&method=${methodFilter}`;
-
       const res = await api.get(url);
-      if (res.data.success) {
-        setPayments(res.data.data.payments);
-        setPagination(res.data.data.pagination);
-      }
-    } catch (err) {
-      toast.error('Failed to load payments');
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (res.data.success) return res.data.data;
+      throw new Error(res.data.message || 'Failed to load payments');
+    },
+    enabled: !!business?.id,
+    staleTime: 1000 * 60 * 2,
+  });
 
-  useEffect(() => {
-    fetchPayments();
-  }, [page, methodFilter]);
+  const payments = data?.payments || [];
+  const pagination = data?.pagination || { total: 0, totalPages: 1 };
 
   const handleExport = async () => {
     try {

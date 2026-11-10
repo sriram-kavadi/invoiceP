@@ -349,13 +349,17 @@ CREATE INDEX IF NOT EXISTS "InvoiceSequence_businessId_idx" ON "InvoiceSequence"
 CREATE UNIQUE INDEX IF NOT EXISTS "InvoiceSequence_businessId_prefix_financialYear_key" ON "InvoiceSequence"("businessId", "prefix", "financialYear");
 CREATE UNIQUE INDEX IF NOT EXISTS "Invoice_shareToken_key" ON "Invoice"("shareToken");
 CREATE INDEX IF NOT EXISTS "Invoice_businessId_idx" ON "Invoice"("businessId");
+CREATE INDEX IF NOT EXISTS "Invoice_businessId_invoiceDate_idx" ON "Invoice"("businessId", "invoiceDate" DESC);
 CREATE INDEX IF NOT EXISTS "Invoice_businessId_status_idx" ON "Invoice"("businessId", "status");
+CREATE INDEX IF NOT EXISTS "Invoice_businessId_status_invoiceDate_idx" ON "Invoice"("businessId", "status", "invoiceDate" DESC);
 CREATE INDEX IF NOT EXISTS "Invoice_businessId_paymentStatus_idx" ON "Invoice"("businessId", "paymentStatus");
+CREATE INDEX IF NOT EXISTS "Invoice_businessId_customerId_idx" ON "Invoice"("businessId", "customerId");
 CREATE INDEX IF NOT EXISTS "Invoice_customerId_idx" ON "Invoice"("customerId");
 CREATE INDEX IF NOT EXISTS "Invoice_shareToken_idx" ON "Invoice"("shareToken");
 CREATE UNIQUE INDEX IF NOT EXISTS "Invoice_businessId_invoiceNumber_key" ON "Invoice"("businessId", "invoiceNumber");
 CREATE INDEX IF NOT EXISTS "InvoiceItem_invoiceId_idx" ON "InvoiceItem"("invoiceId");
 CREATE INDEX IF NOT EXISTS "Payment_invoiceId_idx" ON "Payment"("invoiceId");
+CREATE INDEX IF NOT EXISTS "Payment_paymentDate_idx" ON "Payment"("paymentDate" DESC);
 CREATE INDEX IF NOT EXISTS "InvoiceAuditLog_invoiceId_idx" ON "InvoiceAuditLog"("invoiceId");
 CREATE INDEX IF NOT EXISTS "InvoiceFile_invoiceId_idx" ON "InvoiceFile"("invoiceId");
 
