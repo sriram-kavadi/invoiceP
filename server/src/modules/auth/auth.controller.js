@@ -42,6 +42,13 @@ function sanitizeUser(user) {
  * issues a JWT and stores a Session.
  */
 export async function register(req, res) {
+  if (!process.env.DATABASE_URL) {
+    return res.status(500).json({
+      success: false,
+      message: 'DATABASE_URL is not configured in Vercel environment variables. Please add DATABASE_URL in Vercel Project Settings.',
+    });
+  }
+
   const result = registerSchema.safeParse(req.body);
   if (!result.success) {
     return res.status(400).json({
@@ -133,6 +140,13 @@ export async function register(req, res) {
  * Authenticates a user, issues a JWT (httpOnly cookie + response body).
  */
 export async function login(req, res) {
+  if (!process.env.DATABASE_URL) {
+    return res.status(500).json({
+      success: false,
+      message: 'DATABASE_URL is not configured in Vercel environment variables. Please add DATABASE_URL in Vercel Project Settings.',
+    });
+  }
+
   const result = loginSchema.safeParse(req.body);
   if (!result.success) {
     return res.status(400).json({

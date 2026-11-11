@@ -35,6 +35,9 @@ export const onboardSchema = z.object({
     .regex(/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/, 'Invalid UPI ID (e.g. name@bank or 9876543210@upi)')
     .optional()
     .or(z.literal('')),
+  upiQrPath: z.string().trim().optional().nullable(),
+  upiQrMode: z.enum(['DYNAMIC', 'UPLOADED', 'DISABLED']).optional(),
+  showUpiQr: z.boolean().optional(),
   authorizedSignatory: z.string().trim().optional(),
   jurisdiction: z.string().trim().optional(),
   declaration: z.string().trim().optional(),
@@ -72,6 +75,9 @@ export const updateProfileSchema = z.object({
     .regex(/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/, 'Invalid UPI ID (e.g. name@bank or 9876543210@upi)')
     .optional()
     .or(z.literal('')),
+  upiQrPath: z.string().trim().optional().nullable(),
+  upiQrMode: z.enum(['DYNAMIC', 'UPLOADED', 'DISABLED']).optional(),
+  showUpiQr: z.boolean().optional(),
   authorizedSignatory: z.string().trim().optional(),
   jurisdiction: z.string().trim().optional(),
   declaration: z.string().trim().optional(),

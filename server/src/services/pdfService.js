@@ -1,7 +1,11 @@
 import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { generateUpiQrDataUrl, isValidUpiId } from '../utils/upi.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -275,8 +279,9 @@ class PdfService {
         </tr>`;
     }).join('');
 
-    // Dynamic blank filler rows: 2 for 1 item, 1 for 2 items, 0 for 3+ items to guarantee single page fit
-    const fillerCnt = Math.max(0, Math.min(2, 3 - items.length));
+    // Dynamic blank filler rows: fills printable A4 portrait page intelligently
+    const targetRows = isGst ? 12 : 14;
+    const fillerCnt = Math.max(0, targetRows - items.length);
     const gstBlank  = isGst ? '<td class="tc"></td>' : '';
     const fillerRows = Array.from({ length: fillerCnt }, () => `
       <tr class="filler-row">
@@ -448,7 +453,7 @@ class PdfService {
       s(business.state) + (business.stateCode ? ` - ${business.stateCode}` : ''),
     ].filter(Boolean).join(', ');
 
-    // ── Bank details & Dynamic UPI QR ────────────────────────────────────────
+    // ── Bank details & Dynamic / Uploaded UPI QR ────────────────────────────
     const bank = bankAccount || {};
     const bankDetailsHtml = `
       <div class="bank-row"><span class="bank-label">A/c Holder:</span> ${s(bank.accountHolder || business.name)}</div>
@@ -459,33 +464,71 @@ class PdfService {
 
     const upiId = bank.upiId || business.upiId || null;
     let upiQrHtml = '';
-    // Use remaining outstanding balance if partially paid, otherwise grandTotal
-    const qrAmount = Number(
-      invoice.outstandingAmount != null && Number(invoice.outstandingAmount) > 0
-        ? invoice.outstandingAmount
-        : grandTotal
-    );
+    const showUpiQr = business.settings?.showUpiQr ?? true;
+    const qrMode = business.upiQrMode || (business.upiQrPath ? 'UPLOADED' : 'DYNAMIC');
 
-    if (upiId && isValidUpiId(upiId)) {
-      try {
-        const upiQrDataUrl = await generateUpiQrDataUrl({
-          upiId,
-          payeeName: business.name,
-          amount: qrAmount,
-          invoiceNumber: invoice.invoiceNumber,
-          invoiceId: invoice.id,
-        });
-        if (upiQrDataUrl) {
+    if (showUpiQr && qrMode !== 'DISABLED') {
+      if (qrMode === 'UPLOADED' && business.upiQrPath) {
+        // Uploaded static QR code mode
+        let qrDataUrl = null;
+        const qrPath = business.upiQrPath;
+        if (qrPath.startsWith('http://') || qrPath.startsWith('https://')) {
+          qrDataUrl = qrPath;
+        } else {
+          let diskPath = path.resolve(process.cwd(), qrPath);
+          if (!fs.existsSync(diskPath)) {
+            diskPath = path.resolve(__dirname, '..', '..', '..', qrPath);
+          }
+          if (!fs.existsSync(diskPath)) {
+            diskPath = path.resolve(__dirname, '..', '..', qrPath);
+          }
+          if (fs.existsSync(diskPath)) {
+            try {
+              const ext = path.extname(diskPath).toLowerCase().replace('.', '') || 'png';
+              const fileBuf = fs.readFileSync(diskPath);
+              qrDataUrl = `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${fileBuf.toString('base64')}`;
+            } catch (err) {
+              console.warn('[PDF Service] Error reading uploaded QR file:', err.message);
+            }
+          }
+        }
+
+        if (qrDataUrl) {
           upiQrHtml = `
-            <div class="upi-qr-block" style="text-align: center; margin-left: 8px; flex-shrink: 0; border: 1px solid #000; padding: 3px; background: #fff;">
-              <img src="${upiQrDataUrl}" alt="UPI QR" style="width: 70px; height: 70px; display: block; margin: 0 auto;" />
+            <div class="upi-qr-block" style="text-align: center; margin-left: 8px; flex-shrink: 0; border: 1px solid #000; padding: 4px; background: #fff;">
+              <img src="${qrDataUrl}" alt="UPI QR" style="width: 76px; height: 76px; object-fit: contain; display: block; margin: 0 auto;" />
               <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">Scan &amp; Pay using any UPI app</div>
-              <div style="font-size: 6pt; font-family: monospace; color: #111;">${s(upiId)}</div>
-              <div style="font-size: 5pt; color: #666; max-width: 95px; line-height: 1.1; margin-top: 1px;">Scan does not confirm payment; seller verification required.</div>
+              <div style="font-size: 5pt; color: #555; max-width: 95px; line-height: 1.1; margin-top: 2px;">Seller QR • Enter payable amount in app • Scan does not confirm payment.</div>
             </div>`;
         }
-      } catch (qrErr) {
-        console.warn('[PDF Service] QR generation skipped:', qrErr.message);
+      } else if (upiId && isValidUpiId(upiId)) {
+        // Dynamic invoice-specific UPI QR mode
+        const qrAmount = Number(
+          invoice.outstandingAmount != null && Number(invoice.outstandingAmount) > 0
+            ? invoice.outstandingAmount
+            : grandTotal
+        );
+
+        try {
+          const upiQrDataUrl = await generateUpiQrDataUrl({
+            upiId,
+            payeeName: business.name,
+            amount: qrAmount,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceId: invoice.id,
+          });
+          if (upiQrDataUrl) {
+            upiQrHtml = `
+              <div class="upi-qr-block" style="text-align: center; margin-left: 8px; flex-shrink: 0; border: 1px solid #000; padding: 3px; background: #fff;">
+                <img src="${upiQrDataUrl}" alt="UPI QR" style="width: 74px; height: 74px; display: block; margin: 0 auto;" />
+                <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">Scan &amp; Pay using any UPI app</div>
+                <div style="font-size: 6pt; font-family: monospace; color: #111;">${s(upiId)}</div>
+                <div style="font-size: 5pt; color: #666; max-width: 95px; line-height: 1.1; margin-top: 1px;">Scan does not confirm payment; seller verification required.</div>
+              </div>`;
+          }
+        } catch (qrErr) {
+          console.warn('[PDF Service] QR generation skipped:', qrErr.message);
+        }
       }
     }
 
@@ -675,7 +718,7 @@ class PdfService {
     .bold   { font-weight: bold; }
 
     /* ── Filler rows ─────────────────────────────────────────────────── */
-    .filler-row td { height: 16px; }
+    .filler-row td { height: 26px; }
 
     /* ── Totals row ──────────────────────────────────────────────────── */
     .totals-row td {
@@ -738,7 +781,7 @@ class PdfService {
     .bottom-section {
       display: grid;
       grid-template-columns: 60% 40%;
-      min-height: 90px;
+      min-height: 110px;
     }
 
     .bank-details-block {
@@ -788,7 +831,7 @@ class PdfService {
     .signatory-company {
       font-weight: bold;
       font-size: 9pt;
-      margin-bottom: 30px; /* space for signature */
+      margin-bottom: 42px; /* ample space for physical signature or stamp */
     }
 
     .signatory-title {

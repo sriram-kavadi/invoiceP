@@ -20,6 +20,9 @@ import {
   deleteBankAccount,
   uploadLogo,
   logoUpload,
+  uploadUpiQr,
+  removeUpiQr,
+  qrUpload,
 } from './business.controller.js';
 
 const router = Router();
@@ -52,5 +55,26 @@ router.post(
   logoUpload.single('logo'),
   uploadLogo,
 );
+
+// UPI QR Upload & Remove
+router.post(
+  '/upload-upi-qr',
+  authenticate,
+  attachBusiness,
+  (req, res, next) => {
+    qrUpload.single('qrImage')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ success: false, message: 'File is too large. Maximum allowed size is 5MB.' });
+        }
+        return res.status(400).json({ success: false, message: err.message || 'File upload error.' });
+      }
+      next();
+    });
+  },
+  uploadUpiQr,
+);
+
+router.delete('/upi-qr', authenticate, attachBusiness, removeUpiQr);
 
 export default router;

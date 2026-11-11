@@ -21,7 +21,11 @@ export default function InvoicePreview({ invoiceData }) {
 
   // UPI QR Code
   const upiId = bankAccount.upiId || business.upiId || null;
+  const qrMode = business.upiQrMode || (business.upiQrPath ? 'UPLOADED' : 'DYNAMIC');
+  const showQr = business.settings?.showUpiQr ?? true;
+
   const [upiQrUrl, setUpiQrUrl] = useState(null);
+  const [isUploadedQr, setIsUploadedQr] = useState(false);
 
   // Dynamic payable amount: use remaining outstanding balance if partially paid
   const qrAmount = Number(
@@ -32,6 +36,22 @@ export default function InvoicePreview({ invoiceData }) {
 
   useEffect(() => {
     let isMounted = true;
+
+    if (!showQr || qrMode === 'DISABLED') {
+      setUpiQrUrl(null);
+      setIsUploadedQr(false);
+      return;
+    }
+
+    if (qrMode === 'UPLOADED' && business.upiQrPath) {
+      const url = business.upiQrPath.startsWith('http') || business.upiQrPath.startsWith('/')
+        ? business.upiQrPath
+        : '/' + business.upiQrPath;
+      setUpiQrUrl(url);
+      setIsUploadedQr(true);
+      return;
+    }
+
     if (upiId && isValidUpiId(upiId)) {
       generateUpiQrDataUrl({
         upiId,
@@ -40,15 +60,20 @@ export default function InvoicePreview({ invoiceData }) {
         invoiceNumber: invoice.invoiceNumber,
         invoiceId: invoice.id,
       }).then((url) => {
-        if (isMounted) setUpiQrUrl(url);
+        if (isMounted) {
+          setUpiQrUrl(url);
+          setIsUploadedQr(false);
+        }
       });
     } else {
       setUpiQrUrl(null);
+      setIsUploadedQr(false);
     }
+
     return () => {
       isMounted = false;
     };
-  }, [upiId, business.name, qrAmount, invoice.invoiceNumber, invoice.id]);
+  }, [showQr, qrMode, business.upiQrPath, upiId, business.name, qrAmount, invoice.invoiceNumber, invoice.id]);
 
   return (
     <div className="bg-white text-black text-[11px] leading-tight font-sans p-6 max-w-4xl mx-auto shadow-md border border-gray-300 print:shadow-none print:border-none print:p-0 print:m-0 print:text-[10px]">
@@ -327,10 +352,16 @@ export default function InvoicePreview({ invoiceData }) {
             {/* UPI QR Code Block */}
             {upiQrUrl && (
               <div className="text-center p-1 border border-black rounded bg-white flex-shrink-0">
-                <img src={upiQrUrl} alt="UPI QR" className="w-16 h-16 mx-auto block" />
+                <img src={upiQrUrl} alt="UPI QR" className="w-16 h-16 object-contain mx-auto block" />
                 <div className="text-[7.5px] font-bold mt-0.5 tracking-tight">Scan &amp; Pay using any UPI app</div>
-                <div className="text-[6.5px] font-mono text-gray-700 truncate max-w-[85px]">{upiId}</div>
-                <div className="text-[5.5px] text-gray-500 leading-tight">Seller confirmation req.</div>
+                {isUploadedQr ? (
+                  <div className="text-[5.5px] text-gray-500 leading-tight mt-0.5">Seller QR • Enter invoice amount</div>
+                ) : (
+                  <>
+                    <div className="text-[6.5px] font-mono text-gray-700 truncate max-w-[85px]">{upiId}</div>
+                    <div className="text-[5.5px] text-gray-500 leading-tight">Seller confirmation req.</div>
+                  </>
+                )}
               </div>
             )}
           </div>

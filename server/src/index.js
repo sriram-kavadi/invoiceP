@@ -18,6 +18,7 @@ import reportRoutes from './modules/reports/reports.routes.js';
 import fileRoutes from './modules/files/files.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { timingMiddleware } from './middleware/timing.js';
+import prisma from './config/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,9 +98,30 @@ apiRouter.use('/dashboard', dashboardRoutes);
 apiRouter.use('/reports', reportRoutes);
 apiRouter.use('/files', fileRoutes);
 
-// Health check
-apiRouter.get('/health', (req, res) => {
-  res.json({ success: true, message: 'InvoiceHub API is running', timestamp: new Date().toISOString() });
+// Health check with database diagnostics
+apiRouter.get('/health', async (req, res) => {
+  let dbStatus = 'ok';
+  let dbError = null;
+  try {
+    if (!process.env.DATABASE_URL) {
+      dbStatus = 'missing_env';
+      dbError = 'DATABASE_URL is not set in environment variables';
+    } else {
+      await prisma.$queryRaw`SELECT 1`;
+    }
+  } catch (err) {
+    dbStatus = 'connection_error';
+    dbError = err.message;
+  }
+
+  res.json({
+    success: dbStatus === 'ok',
+    message: dbStatus === 'ok' ? 'InvoiceHub API is running and connected to Supabase' : 'Database connection issue detected',
+    database: dbStatus,
+    dbError,
+    hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Mount on /api and root (for serverless environments)

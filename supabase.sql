@@ -148,7 +148,10 @@ ALTER TABLE "BusinessBankAccount" ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_T
 
 -- Safe migrations for UPI QR Code support (Idempotent)
 ALTER TABLE "Business" ADD COLUMN IF NOT EXISTS "upiId" TEXT;
+ALTER TABLE "Business" ADD COLUMN IF NOT EXISTS "upiQrPath" TEXT;
+ALTER TABLE "Business" ADD COLUMN IF NOT EXISTS "upiQrMode" TEXT DEFAULT 'DYNAMIC';
 ALTER TABLE "BusinessSettings" ADD COLUMN IF NOT EXISTS "showUpiQr" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "BusinessSettings" ADD COLUMN IF NOT EXISTS "upiQrMode" TEXT DEFAULT 'DYNAMIC';
 ALTER TABLE "BusinessBankAccount" ADD COLUMN IF NOT EXISTS "upiId" TEXT;
 
 -- Customer Table

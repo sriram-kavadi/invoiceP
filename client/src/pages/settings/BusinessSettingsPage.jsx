@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { QrCode, Upload, Trash2, Image as ImageIcon, AlertCircle, CheckCircle2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/ui/Input';
@@ -10,6 +11,9 @@ export default function BusinessSettingsPage() {
   const { business, updateBusiness } = useAuth();
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [qrUploading, setQrUploading] = useState(false);
+  const [qrRemoving, setQrRemoving] = useState(false);
+  const qrFileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,6 +30,9 @@ export default function BusinessSettingsPage() {
     gstin: '',
     pan: '',
     upiId: '',
+    upiQrPath: '',
+    upiQrMode: 'DYNAMIC',
+    showUpiQr: true,
     authorizedSignatory: '',
     jurisdiction: 'HYDERABAD',
     declaration: 'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
@@ -52,6 +59,9 @@ export default function BusinessSettingsPage() {
             gstin: b.gstin || '',
             pan: b.pan || '',
             upiId: b.upiId || '',
+            upiQrPath: b.upiQrPath || '',
+            upiQrMode: b.upiQrMode || (b.upiQrPath ? 'UPLOADED' : 'DYNAMIC'),
+            showUpiQr: b.settings?.showUpiQr ?? true,
             authorizedSignatory: b.authorizedSignatory || '',
             jurisdiction: b.jurisdiction || 'HYDERABAD',
             declaration: b.declaration || '',
@@ -77,9 +87,11 @@ export default function BusinessSettingsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.upiId && !/^[\w.-]+@[\w.-]+$/.test(formData.upiId)) {
-      toast.error('Please enter a valid UPI ID (e.g. name@bank or 9876543210@upi)');
-      return;
+    if (formData.showUpiQr && formData.upiQrMode === 'DYNAMIC' && formData.upiId) {
+      if (!/^[\w.-]+@[\w.-]+$/.test(formData.upiId)) {
+        toast.error('Please enter a valid UPI ID (e.g. name@bank or 9876543210@upi)');
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -115,6 +127,83 @@ export default function BusinessSettingsPage() {
       toast.error('Failed to upload logo');
     } finally {
       setLogoUploading(false);
+    }
+  };
+
+  const handleQrFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Client-side validations
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Invalid image type. Please select a PNG or JPG/JPEG image.');
+      if (qrFileInputRef.current) qrFileInputRef.current.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size exceeds 5MB limit. Please choose a smaller image.');
+      if (qrFileInputRef.current) qrFileInputRef.current.value = '';
+      return;
+    }
+
+    const data = new FormData();
+    data.append('qrImage', file);
+
+    setQrUploading(true);
+    try {
+      const res = await api.post('/business/upload-upi-qr', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data.success) {
+        toast.success('UPI QR image uploaded successfully');
+        setFormData((prev) => ({
+          ...prev,
+          upiQrPath: res.data.data.upiQrPath,
+          upiQrMode: 'UPLOADED',
+        }));
+        if (business) {
+          updateBusiness({
+            ...business,
+            upiQrPath: res.data.data.upiQrPath,
+            upiQrMode: 'UPLOADED',
+          });
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to upload QR code image');
+    } finally {
+      setQrUploading(false);
+      if (qrFileInputRef.current) qrFileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveQr = async () => {
+    if (!window.confirm('Are you sure you want to remove the uploaded QR code image?')) return;
+    setQrRemoving(true);
+    try {
+      const res = await api.delete('/business/upi-qr');
+      if (res.data.success) {
+        toast.success('UPI QR image removed');
+        const nextMode = formData.upiId ? 'DYNAMIC' : 'DISABLED';
+        setFormData((prev) => ({
+          ...prev,
+          upiQrPath: '',
+          upiQrMode: nextMode,
+        }));
+        if (business) {
+          updateBusiness({
+            ...business,
+            upiQrPath: null,
+            upiQrMode: nextMode,
+          });
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to remove QR code');
+    } finally {
+      setQrRemoving(false);
     }
   };
 
@@ -281,6 +370,212 @@ export default function BusinessSettingsPage() {
           </div>
         </div>
 
+        {/* UPI Payment Settings */}
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs space-y-5">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-primary-600" />
+              <div>
+                <h2 className="text-sm font-bold text-gray-900">UPI Payment Settings</h2>
+                <p className="text-xs text-gray-500">Configure customer payment QR codes displayed on your invoice PDFs</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Master Enable/Disable Switch */}
+          <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition">
+            <input
+              type="checkbox"
+              checked={formData.showUpiQr}
+              onChange={(e) => handleChange('showUpiQr', e.target.checked)}
+              className="mt-0.5 rounded text-primary-600 focus:ring-primary-500 w-4 h-4"
+            />
+            <div>
+              <span className="text-sm font-bold text-gray-900 block">
+                Enable UPI QR Code on Invoices
+              </span>
+              <span className="text-xs text-gray-500 block">
+                When enabled, a scannable payment QR code is printed in the lower invoice section beside bank details
+              </span>
+            </div>
+          </label>
+
+          {formData.showUpiQr && (
+            <div className="space-y-4 pl-1">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                  Select QR Code Mode
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Dynamic UPI Option */}
+                  <label
+                    className={`p-3.5 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                      formData.upiQrMode === 'DYNAMIC'
+                        ? 'border-primary-600 bg-primary-50/30 ring-1 ring-primary-500'
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="upiQrMode"
+                        value="DYNAMIC"
+                        checked={formData.upiQrMode === 'DYNAMIC'}
+                        onChange={() => handleChange('upiQrMode', 'DYNAMIC')}
+                        className="mt-1 text-primary-600 focus:ring-primary-500"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-gray-900 block">Dynamic UPI QR Code</span>
+                        <span className="text-[11px] text-gray-500 block mt-0.5">
+                          Automatically generates a QR code with the invoice number and exact outstanding balance.
+                        </span>
+                      </div>
+                    </div>
+                  </label>
+
+                  {/* Uploaded Static QR Option */}
+                  <label
+                    className={`p-3.5 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                      formData.upiQrMode === 'UPLOADED'
+                        ? 'border-primary-600 bg-primary-50/30 ring-1 ring-primary-500'
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="radio"
+                        name="upiQrMode"
+                        value="UPLOADED"
+                        checked={formData.upiQrMode === 'UPLOADED'}
+                        onChange={() => handleChange('upiQrMode', 'UPLOADED')}
+                        className="mt-1 text-primary-600 focus:ring-primary-500"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-gray-900 block">Custom Uploaded QR Code</span>
+                        <span className="text-[11px] text-gray-500 block mt-0.5">
+                          Upload your official merchant standee image (PhonePe, Google Pay, Paytm, etc.).
+                        </span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Dynamic QR Configuration */}
+              {formData.upiQrMode === 'DYNAMIC' && (
+                <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-3">
+                  <Input
+                    label="Business UPI ID / VPA"
+                    value={formData.upiId}
+                    onChange={(e) => handleChange('upiId', e.target.value.toLowerCase().trim())}
+                    placeholder="e.g. company@okhdfcbank or 9876543210@upi"
+                    helperText="Customers scanning this QR code in any UPI app will see your company name and the exact invoice balance pre-filled."
+                  />
+                  <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 p-2.5 rounded-lg border border-blue-100">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-blue-600" />
+                    <span>Dynamic QR codes automatically adjust when partial payments are received on an invoice.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Uploaded Static QR Configuration */}
+              {formData.upiQrMode === 'UPLOADED' && (
+                <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-gray-900 block">Merchant Standee / Static QR Image</span>
+                      <span className="text-[11px] text-gray-500 block">Supported formats: PNG, JPG, JPEG (Max 5MB)</span>
+                    </div>
+                  </div>
+
+                  {formData.upiQrPath ? (
+                    <div className="flex flex-col sm:flex-row items-center gap-5 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="p-2 bg-white rounded-lg border border-gray-300 shadow-xs shrink-0">
+                        <img
+                          src={formData.upiQrPath.startsWith('http') || formData.upiQrPath.startsWith('/') ? formData.upiQrPath : `/${formData.upiQrPath}`}
+                          alt="Uploaded UPI QR"
+                          className="w-28 h-28 object-contain rounded"
+                        />
+                      </div>
+                      <div className="space-y-2 text-center sm:text-left flex-1">
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Active on Printable Invoices</span>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          This static QR code will be printed at full sharpness in the lower section of your invoice PDFs.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 pt-1 justify-center sm:justify-start">
+                          <input
+                            type="file"
+                            ref={qrFileInputRef}
+                            onChange={handleQrFileSelected}
+                            accept="image/png,image/jpeg,image/jpg"
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            icon={Upload}
+                            loading={qrUploading}
+                            onClick={() => qrFileInputRef.current?.click()}
+                          >
+                            Replace QR Code
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            icon={Trash2}
+                            loading={qrRemoving}
+                            onClick={handleRemoveQr}
+                            className="text-red-600 hover:text-red-700 hover:border-red-300"
+                          >
+                            Remove QR
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-primary-400 transition bg-gray-50/50">
+                      <input
+                        type="file"
+                        ref={qrFileInputRef}
+                        onChange={handleQrFileSelected}
+                        accept="image/png,image/jpeg,image/jpg"
+                        className="hidden"
+                      />
+                      <QrCode className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                      <p className="text-xs font-bold text-gray-800">No UPI QR code uploaded yet</p>
+                      <p className="text-[11px] text-gray-400 mb-3">Upload your merchant QR code image to print it directly on invoices</p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        icon={Upload}
+                        loading={qrUploading}
+                        onClick={() => qrFileInputRef.current?.click()}
+                      >
+                        Upload QR Image
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="text-[11px] text-gray-500 bg-amber-50 p-2.5 rounded-lg border border-amber-200/60 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>Static QR codes display your exact uploaded image without modifying payment data. Customers will type the payable amount into their UPI app.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Safety notice */}
+              <div className="text-[11px] text-gray-500 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+                <strong>Payment Safety Notice:</strong> Scanning a QR code does not mark an invoice as paid. Always verify that funds have been credited to your bank account before updating payment status.
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Signatory & Legal Terms */}
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs space-y-4">
           <h2 className="text-sm font-bold text-gray-900 border-b pb-2">Signatory & Declaration</h2>
@@ -300,14 +595,6 @@ export default function BusinessSettingsPage() {
               helperText="Printed as: SUBJECT TO [CITY] JURISDICTION"
             />
           </div>
-
-          <Input
-            label="Default Business UPI ID (for QR Code Payment)"
-            value={formData.upiId}
-            onChange={(e) => handleChange('upiId', e.target.value.toLowerCase().trim())}
-            placeholder="e.g. mybusiness@okaxis or 9876543210@upi"
-            helperText="Generates an invoice-specific UPI QR code on your PDF for seamless customer payments."
-          />
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
