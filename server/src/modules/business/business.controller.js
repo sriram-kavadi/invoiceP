@@ -4,28 +4,16 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import prisma from '../../config/database.js';
 import { success, error } from '../../utils/response.js';
+import { uploadBusinessQr, deleteBusinessQr, uploadBusinessLogo } from '../../services/storageService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ─── Multer setup for logo uploads ───────────────────────────────────────────
-
-const logoStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '..', '..', '..', 'uploads', 'logos');
-    fs.mkdirSync(uploadDir, { recursive: true });
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const filename = `logo-${req.businessId}-${Date.now()}${ext}`;
-    cb(null, filename);
-  },
-});
+// ─── Multer setup for logo uploads (Memory Storage) ───────────────────────────
 
 const logoFilter = (req, file, cb) => {
   const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
-  if (allowed.includes(file.mimetype)) {
+  if (allowed.includes(file.mimetype.toLowerCase())) {
     cb(null, true);
   } else {
     cb(new Error('Only image files (JPEG, PNG, WEBP, SVG) are allowed.'), false);
@@ -33,37 +21,27 @@ const logoFilter = (req, file, cb) => {
 };
 
 export const logoUpload = multer({
-  storage: logoStorage,
+  storage: multer.memoryStorage(),
   fileFilter: logoFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
-
-// ─── Multer setup for UPI QR code uploads (PNG, JPG, JPEG only) ─────────────
-
-const qrStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '..', '..', '..', 'uploads', 'qr-codes');
-    fs.mkdirSync(uploadDir, { recursive: true });
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const filename = `upi-qr-${req.businessId}-${Date.now()}${ext}`;
-    cb(null, filename);
-  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
+
+// ─── Multer setup for UPI QR code uploads (PNG, JPG, JPEG only - Memory Storage) ──
+// Uses in-memory storage to prevent local filesystem writes on Vercel/serverless environments
 
 const qrFilter = (req, file, cb) => {
   const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
-  if (allowed.includes(file.mimetype)) {
+  if (allowed.includes(file.mimetype.toLowerCase())) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PNG and JPG/JPEG images are supported for UPI QR codes.'), false);
+    cb(new Error('Invalid file type. Only PNG, JPG, and JPEG images are supported for UPI QR codes.'), false);
   }
 };
 
 export const qrUpload = multer({
-  storage: qrStorage,
+  storage: multer.memoryStorage(),
   fileFilter: qrFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
@@ -391,22 +369,26 @@ export const deleteBankAccount = async (req, res, next) => {
 
 export const uploadLogo = async (req, res, next) => {
   try {
-    if (!req.file) {
+    if (!req.file || !req.file.buffer) {
       return error(res, 'No file uploaded. Please provide an image file.', 400);
     }
 
-    // Store relative path for portability
-    const logoPath = `uploads/logos/${req.file.filename}`;
+    const { storagePath, publicUrl } = await uploadBusinessLogo({
+      businessId: req.businessId,
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      originalname: req.file.originalname,
+    });
 
     const business = await prisma.business.update({
       where: { id: req.businessId },
-      data: { logoPath },
+      data: { logoPath: storagePath },
       select: { id: true, name: true, logoPath: true },
     });
 
     return success(res, {
       logoPath: business.logoPath,
-      logoUrl: `${process.env.SERVER_URL || ''}/uploads/logos/${req.file.filename}`,
+      logoUrl: publicUrl,
     }, 'Logo uploaded successfully.');
   } catch (err) {
     next(err);
@@ -417,37 +399,33 @@ export const uploadLogo = async (req, res, next) => {
 
 export const uploadUpiQr = async (req, res, next) => {
   try {
-    if (!req.file) {
+    if (!req.file || !req.file.buffer) {
       return error(res, 'No file uploaded. Please upload a valid PNG or JPG/JPEG image.', 400);
     }
 
-    const upiQrPath = `uploads/qr-codes/${req.file.filename}`;
+    // Retrieve existing business to clean up old image if present
+    const existing = await prisma.business.findUnique({
+      where: { id: req.businessId },
+      select: { id: true, upiQrPath: true },
+    });
 
-    // Optional Supabase Storage mirror if credentials are set
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
-    if (supabaseUrl && supabaseKey) {
-      try {
-        const fileBuffer = fs.readFileSync(req.file.path);
-        const storagePath = `qr-codes/${req.businessId}/${req.file.filename}`;
-        await fetch(`${supabaseUrl}/storage/v1/object/business-assets/${storagePath}`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${supabaseKey}`,
-            'Content-Type': req.file.mimetype,
-            'x-upsert': 'true',
-          },
-          body: fileBuffer,
-        });
-      } catch (storageErr) {
-        console.warn('[Business] Supabase Storage upload skipped/failed:', storageErr.message);
-      }
+    // Upload directly to Supabase Storage using memory buffer (zero local disk write)
+    const { storagePath, publicUrl } = await uploadBusinessQr({
+      businessId: req.businessId,
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      originalname: req.file.originalname,
+    });
+
+    // Safely remove previous QR image from Supabase Storage
+    if (existing?.upiQrPath && existing.upiQrPath !== storagePath) {
+      await deleteBusinessQr(existing.upiQrPath);
     }
 
     const business = await prisma.business.update({
       where: { id: req.businessId },
       data: {
-        upiQrPath,
+        upiQrPath: storagePath,
         upiQrMode: 'UPLOADED',
       },
       select: {
@@ -462,7 +440,7 @@ export const uploadUpiQr = async (req, res, next) => {
     return success(res, {
       upiQrPath: business.upiQrPath,
       upiQrMode: business.upiQrMode,
-      upiQrUrl: `/uploads/qr-codes/${req.file.filename}`,
+      upiQrUrl: publicUrl,
     }, 'UPI QR code uploaded successfully.');
   } catch (err) {
     next(err);
@@ -479,14 +457,7 @@ export const removeUpiQr = async (req, res, next) => {
     });
 
     if (existing?.upiQrPath) {
-      const diskPath = path.resolve(__dirname, '..', '..', '..', existing.upiQrPath);
-      if (fs.existsSync(diskPath)) {
-        try {
-          fs.unlinkSync(diskPath);
-        } catch (unlinkErr) {
-          console.warn('[Business] Could not delete old QR file:', unlinkErr.message);
-        }
-      }
+      await deleteBusinessQr(existing.upiQrPath);
     }
 
     const nextMode = existing?.upiId ? 'DYNAMIC' : 'DISABLED';

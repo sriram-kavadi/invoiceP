@@ -129,6 +129,7 @@ export default function App() {
           {/* Settings */}
           <Route path="settings/business" element={<Suspense fallback={<PageLoader />}><BusinessSettingsPage /></Suspense>} />
           <Route path="settings/bank" element={<Suspense fallback={<PageLoader />}><BankSettingsPage /></Suspense>} />
+          <Route path="settings/bank-accounts" element={<Navigate to="/settings/bank" replace />} />
           <Route path="settings/invoice" element={<Suspense fallback={<PageLoader />}><InvoiceSettingsPage /></Suspense>} />
         </Route>
 

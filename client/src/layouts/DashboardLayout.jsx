@@ -41,8 +41,43 @@ export default function DashboardLayout({ children }) {
   ];
 
   const isActive = (path) => {
-    if (path === '/dashboard') return location.pathname === '/dashboard';
-    return location.pathname.startsWith(path);
+    const current = location.pathname;
+
+    // Exact matches
+    if (path === '/dashboard') {
+      return current === '/dashboard' || current === '/';
+    }
+    if (path === '/invoices/create') {
+      return current === '/invoices/create';
+    }
+    if (path === '/invoices') {
+      // Matches /invoices and sub-routes (e.g. /invoices/:id, /invoices/:id/edit),
+      // but strictly NEVER matches /invoices/create (which has its own dedicated item)
+      return current === '/invoices' || (current.startsWith('/invoices/') && current !== '/invoices/create');
+    }
+    if (path === '/customers') {
+      return current === '/customers' || current.startsWith('/customers/');
+    }
+    if (path === '/products') {
+      return current === '/products' || current.startsWith('/products/');
+    }
+    if (path === '/payments') {
+      return current === '/payments' || current.startsWith('/payments/');
+    }
+    if (path === '/reports') {
+      return current === '/reports' || current.startsWith('/reports/');
+    }
+    if (path === '/settings/business') {
+      return current === '/settings/business';
+    }
+    if (path === '/settings/bank' || path === '/settings/bank-accounts') {
+      return current === '/settings/bank' || current === '/settings/bank-accounts';
+    }
+    if (path === '/settings/invoice') {
+      return current === '/settings/invoice';
+    }
+
+    return current === path;
   };
 
   return (

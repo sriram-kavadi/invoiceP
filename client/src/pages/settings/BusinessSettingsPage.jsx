@@ -492,7 +492,13 @@ export default function BusinessSettingsPage() {
                     <div className="flex flex-col sm:flex-row items-center gap-5 p-4 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="p-2 bg-white rounded-lg border border-gray-300 shadow-xs shrink-0">
                         <img
-                          src={formData.upiQrPath.startsWith('http') || formData.upiQrPath.startsWith('/') ? formData.upiQrPath : `/${formData.upiQrPath}`}
+                          src={
+                            formData.upiQrPath.startsWith('http') || formData.upiQrPath.startsWith('data:')
+                              ? formData.upiQrPath
+                              : formData.upiQrPath.startsWith('qr-codes/')
+                              ? `https://bekbdyvoodydenjhnord.supabase.co/storage/v1/object/public/business-assets/${formData.upiQrPath}`
+                              : `/${formData.upiQrPath}`
+                          }
                           alt="Uploaded UPI QR"
                           className="w-28 h-28 object-contain rounded"
                         />

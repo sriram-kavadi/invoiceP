@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { generateUpiQrDataUrl, isValidUpiId } from '../utils/upi.js';
+import { getQrDataUrl } from './storageService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -469,29 +470,8 @@ class PdfService {
 
     if (showUpiQr && qrMode !== 'DISABLED') {
       if (qrMode === 'UPLOADED' && business.upiQrPath) {
-        // Uploaded static QR code mode
-        let qrDataUrl = null;
-        const qrPath = business.upiQrPath;
-        if (qrPath.startsWith('http://') || qrPath.startsWith('https://')) {
-          qrDataUrl = qrPath;
-        } else {
-          let diskPath = path.resolve(process.cwd(), qrPath);
-          if (!fs.existsSync(diskPath)) {
-            diskPath = path.resolve(__dirname, '..', '..', '..', qrPath);
-          }
-          if (!fs.existsSync(diskPath)) {
-            diskPath = path.resolve(__dirname, '..', '..', qrPath);
-          }
-          if (fs.existsSync(diskPath)) {
-            try {
-              const ext = path.extname(diskPath).toLowerCase().replace('.', '') || 'png';
-              const fileBuf = fs.readFileSync(diskPath);
-              qrDataUrl = `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${fileBuf.toString('base64')}`;
-            } catch (err) {
-              console.warn('[PDF Service] Error reading uploaded QR file:', err.message);
-            }
-          }
-        }
+        // Uploaded static QR code mode (Supabase Storage / Data URL / URL)
+        const qrDataUrl = await getQrDataUrl(business.upiQrPath);
 
         if (qrDataUrl) {
           upiQrHtml = `

@@ -44,9 +44,12 @@ export default function InvoicePreview({ invoiceData }) {
     }
 
     if (qrMode === 'UPLOADED' && business.upiQrPath) {
-      const url = business.upiQrPath.startsWith('http') || business.upiQrPath.startsWith('/')
-        ? business.upiQrPath
-        : '/' + business.upiQrPath;
+      let url = business.upiQrPath;
+      if (url.startsWith('qr-codes/')) {
+        url = `https://bekbdyvoodydenjhnord.supabase.co/storage/v1/object/public/business-assets/${url}`;
+      } else if (!url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('/')) {
+        url = '/' + url;
+      }
       setUpiQrUrl(url);
       setIsUploadedQr(true);
       return;

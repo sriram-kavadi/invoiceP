@@ -656,5 +656,43 @@ FROM (SELECT "id" FROM "Business" WHERE "name" = 'INFINITY ENTERPRISES' LIMIT 1)
 ON CONFLICT ("businessId", "prefix", "financialYear") DO NOTHING;
 
 -- ==============================================================================
+-- 13. SUPABASE STORAGE BUCKET & POLICIES (business-assets)
+-- ==============================================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'business-assets',
+  'business-assets',
+  true,
+  5242880,
+  ARRAY['image/png', 'image/jpeg', 'image/jpg']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = 5242880,
+  allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/jpg'];
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Public Access for business-assets'
+  ) THEN
+    CREATE POLICY "Public Access for business-assets"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'business-assets');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Allow All for business-assets'
+  ) THEN
+    CREATE POLICY "Allow All for business-assets"
+    ON storage.objects FOR ALL
+    USING (bucket_id = 'business-assets')
+    WITH CHECK (bucket_id = 'business-assets');
+  END IF;
+END $$;
+
+-- ==============================================================================
 -- DONE! Supabase database schema and demo seed are ready for InvoiceHub!
 -- ==============================================================================
