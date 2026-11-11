@@ -23,13 +23,20 @@ export default function InvoicePreview({ invoiceData }) {
   const upiId = bankAccount.upiId || business.upiId || null;
   const [upiQrUrl, setUpiQrUrl] = useState(null);
 
+  // Dynamic payable amount: use remaining outstanding balance if partially paid
+  const qrAmount = Number(
+    invoice.outstandingAmount != null && Number(invoice.outstandingAmount) > 0
+      ? invoice.outstandingAmount
+      : invoice.grandTotal || 0
+  );
+
   useEffect(() => {
     let isMounted = true;
     if (upiId && isValidUpiId(upiId)) {
       generateUpiQrDataUrl({
         upiId,
         payeeName: business.name,
-        amount: invoice.grandTotal,
+        amount: qrAmount,
         invoiceNumber: invoice.invoiceNumber,
         invoiceId: invoice.id,
       }).then((url) => {
@@ -41,7 +48,7 @@ export default function InvoicePreview({ invoiceData }) {
     return () => {
       isMounted = false;
     };
-  }, [upiId, business.name, invoice.grandTotal, invoice.invoiceNumber, invoice.id]);
+  }, [upiId, business.name, qrAmount, invoice.invoiceNumber, invoice.id]);
 
   return (
     <div className="bg-white text-black text-[11px] leading-tight font-sans p-6 max-w-4xl mx-auto shadow-md border border-gray-300 print:shadow-none print:border-none print:p-0 print:m-0 print:text-[10px]">
@@ -118,13 +125,18 @@ export default function InvoicePreview({ invoiceData }) {
             <span>{invoice.deliveryNoteDate ? formatDate(invoice.deliveryNoteDate) : '-'}</span>
           </div>
 
-          <div className="p-1.5 border-r border-black">
+          <div className="p-1.5 border-r border-b border-black">
             <span className="text-gray-500 block text-[9px]">Dispatched through</span>
             <span>{invoice.dispatchedThrough || '-'}</span>
           </div>
-          <div className="p-1.5 border-black">
+          <div className="p-1.5 border-b border-black">
             <span className="text-gray-500 block text-[9px]">Destination</span>
             <span>{invoice.destination || '-'}</span>
+          </div>
+
+          <div className="p-1.5 col-span-2">
+            <span className="text-gray-500 block text-[9px]">Terms of Delivery</span>
+            <span>{invoice.termsOfDelivery || '-'}</span>
           </div>
         </div>
       </div>
@@ -316,7 +328,7 @@ export default function InvoicePreview({ invoiceData }) {
             {upiQrUrl && (
               <div className="text-center p-1 border border-black rounded bg-white flex-shrink-0">
                 <img src={upiQrUrl} alt="UPI QR" className="w-16 h-16 mx-auto block" />
-                <div className="text-[8px] font-bold mt-0.5 tracking-tight">SCAN TO PAY</div>
+                <div className="text-[7.5px] font-bold mt-0.5 tracking-tight">Scan &amp; Pay using any UPI app</div>
                 <div className="text-[6.5px] font-mono text-gray-700 truncate max-w-[85px]">{upiId}</div>
                 <div className="text-[5.5px] text-gray-500 leading-tight">Seller confirmation req.</div>
               </div>

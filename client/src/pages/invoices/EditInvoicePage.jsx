@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, FileCheck, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, FileCheck, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Button from '../../components/ui/Button';
@@ -17,6 +17,7 @@ export default function EditInvoicePage() {
   const [invoice, setInvoice] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [invoiceType, setInvoiceType] = useState('GST');
   const [gstType, setGstType] = useState('INTRASTATE');
@@ -26,7 +27,16 @@ export default function EditInvoicePage() {
   const [dueDate, setDueDate] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');
+  const [deliveryNoteDate, setDeliveryNoteDate] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [referenceDate, setReferenceDate] = useState('');
+  const [otherReferences, setOtherReferences] = useState('');
+  const [buyerOrderNumber, setBuyerOrderNumber] = useState('');
+  const [buyerOrderDate, setBuyerOrderDate] = useState('');
+  const [dispatchDocNumber, setDispatchDocNumber] = useState('');
+  const [dispatchedThrough, setDispatchedThrough] = useState('');
+  const [destination, setDestination] = useState('');
+  const [termsOfDelivery, setTermsOfDelivery] = useState('');
   const [items, setItems] = useState([]);
 
   useEffect(() => {
@@ -54,7 +64,16 @@ export default function EditInvoicePage() {
           setDueDate(inv.dueDate ? inv.dueDate.split('T')[0] : '');
           setPaymentTerms(inv.paymentTerms || '');
           setDeliveryNote(inv.deliveryNote || '');
+          setDeliveryNoteDate(inv.deliveryNoteDate ? inv.deliveryNoteDate.split('T')[0] : '');
           setReferenceNumber(inv.referenceNumber || '');
+          setReferenceDate(inv.referenceDate ? inv.referenceDate.split('T')[0] : '');
+          setOtherReferences(inv.otherReferences || '');
+          setBuyerOrderNumber(inv.buyerOrderNumber || '');
+          setBuyerOrderDate(inv.buyerOrderDate ? inv.buyerOrderDate.split('T')[0] : '');
+          setDispatchDocNumber(inv.dispatchDocNumber || '');
+          setDispatchedThrough(inv.dispatchedThrough || '');
+          setDestination(inv.destination || '');
+          setTermsOfDelivery(inv.termsOfDelivery || '');
           setItems(
             inv.items.map((it) => ({
               ...it,
@@ -127,7 +146,16 @@ export default function EditInvoicePage() {
         dueDate: dueDate || undefined,
         paymentTerms: paymentTerms || undefined,
         deliveryNote: deliveryNote || undefined,
+        deliveryNoteDate: deliveryNoteDate || undefined,
         referenceNumber: referenceNumber || undefined,
+        referenceDate: referenceDate || undefined,
+        otherReferences: otherReferences || undefined,
+        buyerOrderNumber: buyerOrderNumber || undefined,
+        buyerOrderDate: buyerOrderDate || undefined,
+        dispatchDocNumber: dispatchDocNumber || undefined,
+        dispatchedThrough: dispatchedThrough || undefined,
+        destination: destination || undefined,
+        termsOfDelivery: termsOfDelivery || undefined,
         items,
       };
 
@@ -247,6 +275,106 @@ export default function EditInvoicePage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Step: Additional Invoice Details (Collapsible) */}
+        <div className="pt-4 border-t space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full flex items-center justify-between text-left text-xs font-bold uppercase tracking-wider text-gray-700"
+          >
+            <span>Additional Invoice Details (Optional)</span>
+            {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+
+          {showAdvanced && (
+            <div className="space-y-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Input
+                  label="Reference No."
+                  value={referenceNumber}
+                  onChange={(e) => setReferenceNumber(e.target.value)}
+                  placeholder="e.g. REF/89"
+                />
+                <Input
+                  label="Reference Date"
+                  type="date"
+                  value={referenceDate}
+                  onChange={(e) => setReferenceDate(e.target.value)}
+                />
+                <Input
+                  label="Other References"
+                  value={otherReferences}
+                  onChange={(e) => setOtherReferences(e.target.value)}
+                  placeholder="e.g. Tender/Project Ref"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Input
+                  label="Buyer's Order No."
+                  value={buyerOrderNumber}
+                  onChange={(e) => setBuyerOrderNumber(e.target.value)}
+                  placeholder="e.g. PO-2024-001"
+                />
+                <Input
+                  label="Buyer's Order Date"
+                  type="date"
+                  value={buyerOrderDate}
+                  onChange={(e) => setBuyerOrderDate(e.target.value)}
+                />
+                <Input
+                  label="Mode / Terms of Payment"
+                  value={paymentTerms}
+                  onChange={(e) => setPaymentTerms(e.target.value)}
+                  placeholder="e.g. Net 30 / Advance"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Input
+                  label="Delivery Note"
+                  value={deliveryNote}
+                  onChange={(e) => setDeliveryNote(e.target.value)}
+                  placeholder="e.g. DN-040"
+                />
+                <Input
+                  label="Delivery Note Date"
+                  type="date"
+                  value={deliveryNoteDate}
+                  onChange={(e) => setDeliveryNoteDate(e.target.value)}
+                />
+                <Input
+                  label="Dispatch Doc No."
+                  value={dispatchDocNumber}
+                  onChange={(e) => setDispatchDocNumber(e.target.value)}
+                  placeholder="LR / Docket #"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Input
+                  label="Dispatched Through"
+                  value={dispatchedThrough}
+                  onChange={(e) => setDispatchedThrough(e.target.value)}
+                  placeholder="e.g. VRL Logistics / By Road"
+                />
+                <Input
+                  label="Destination"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="e.g. HYDERABAD"
+                />
+                <Input
+                  label="Terms of Delivery"
+                  value={termsOfDelivery}
+                  onChange={(e) => setTermsOfDelivery(e.target.value)}
+                  placeholder="e.g. Door Delivery / Ex-Works"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Grand Total */}

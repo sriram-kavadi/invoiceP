@@ -169,7 +169,7 @@ class PdfService {
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
-        margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' },
+        margin: { top: '6mm', right: '6mm', bottom: '6mm', left: '6mm' },
       });
 
       if (outputPath) {
@@ -275,9 +275,8 @@ class PdfService {
         </tr>`;
     }).join('');
 
-    // Blank filler rows so the product table has a minimum visual height
-    const minRows   = 10;
-    const fillerCnt = Math.max(0, minRows - items.length);
+    // Dynamic blank filler rows: 2 for 1 item, 1 for 2 items, 0 for 3+ items to guarantee single page fit
+    const fillerCnt = Math.max(0, Math.min(2, 3 - items.length));
     const gstBlank  = isGst ? '<td class="tc"></td>' : '';
     const fillerRows = Array.from({ length: fillerCnt }, () => `
       <tr class="filler-row">
@@ -385,27 +384,49 @@ class PdfService {
         </div>`;
     }
 
-    // ── Invoice fields (right column) ────────────────────────────────────────
-    const invoiceFields = [
-      ['Invoice No.',              s(invoice.invoiceNumber)],
-      ['Dated',                    formatDate(invoice.invoiceDate)],
-      ['Delivery Note',            s(invoice.deliveryNote)],
-      ['Payment Terms',            s(invoice.paymentTerms)],
-      ['Reference No. & Date',     [s(invoice.referenceNumber), formatDate(invoice.referenceDate)].filter(Boolean).join(' / ')],
-      ['Other References',         s(invoice.otherReferences)],
-      ["Buyer's Order No.",        s(invoice.buyerOrderNumber)],
-      ['Dated',                    formatDate(invoice.buyerOrderDate)],
-      ['Dispatch Doc No.',         s(invoice.dispatchDocNumber)],
-      ['Delivery Note Date',       formatDate(invoice.deliveryNoteDate)],
-      ['Dispatched through',       s(invoice.dispatchedThrough)],
-      ['Destination',              s(invoice.destination)],
-      ['Terms of Delivery',        s(invoice.termsOfDelivery)],
+    // ── Invoice fields (2-column key-value grid for compact layout) ──────────
+    const refDateFormatted = formatDate(invoice.referenceDate);
+    const refCombined = [s(invoice.referenceNumber), refDateFormatted].filter(Boolean).join(' dt. ');
+    const buyerOrderDateFormatted = formatDate(invoice.buyerOrderDate);
+    const deliveryNoteDateFormatted = formatDate(invoice.deliveryNoteDate);
+
+    const rightGridRows = [
+      {
+        l1: 'Invoice No.', v1: s(invoice.invoiceNumber) || 'DRAFT',
+        l2: 'Dated', v2: formatDate(invoice.invoiceDate) || '-'
+      },
+      {
+        l1: 'Delivery Note', v1: s(invoice.deliveryNote) || '-',
+        l2: 'Mode/Terms of Payment', v2: s(invoice.paymentTerms) || '-'
+      },
+      {
+        l1: 'Reference No. & Date', v1: refCombined || '-',
+        l2: 'Other References', v2: s(invoice.otherReferences) || '-'
+      },
+      {
+        l1: "Buyer's Order No.", v1: s(invoice.buyerOrderNumber) || '-',
+        l2: 'Order Date', v2: buyerOrderDateFormatted || '-'
+      },
+      {
+        l1: 'Dispatch Doc No.', v1: s(invoice.dispatchDocNumber) || '-',
+        l2: 'Delivery Note Date', v2: deliveryNoteDateFormatted || '-'
+      },
+      {
+        l1: 'Dispatched through', v1: s(invoice.dispatchedThrough) || '-',
+        l2: 'Destination', v2: s(invoice.destination) || '-'
+      },
+      {
+        l1: 'Terms of Delivery', v1: s(invoice.termsOfDelivery) || '-',
+        l2: '', v2: ''
+      }
     ];
 
-    const invoiceFieldRows = invoiceFields.map(([label, value]) => `
+    const invoiceFieldRows = rightGridRows.map((row) => `
       <tr>
-        <td class="field-label">${label}</td>
-        <td class="field-value">${value}</td>
+        <td class="field-label">${row.l1}</td>
+        <td class="field-value">${row.v1}</td>
+        <td class="field-label">${row.l2}</td>
+        <td class="field-value">${row.v2}</td>
       </tr>`).join('');
 
     // ── Consignee / Buyer addresses ──────────────────────────────────────────
@@ -427,33 +448,40 @@ class PdfService {
       s(business.state) + (business.stateCode ? ` - ${business.stateCode}` : ''),
     ].filter(Boolean).join(', ');
 
-    // ── Bank details & UPI QR ─────────────────────────────────────────────────
+    // ── Bank details & Dynamic UPI QR ────────────────────────────────────────
     const bank = bankAccount || {};
     const bankDetailsHtml = `
-      <div class="bank-row"><span class="bank-label">A/c Holder:</span> ${s(bank.accountHolder)}</div>
-      <div class="bank-row"><span class="bank-label">Bank Name:</span> ${s(bank.bankName)}</div>
-      <div class="bank-row"><span class="bank-label">A/c No.:</span> ${s(bank.accountNumber)}</div>
-      <div class="bank-row"><span class="bank-label">Branch &amp; IFS Code:</span> ${s(bank.branch)}${bank.ifscCode ? ' / ' + bank.ifscCode : ''}</div>
+      <div class="bank-row"><span class="bank-label">A/c Holder:</span> ${s(bank.accountHolder || business.name)}</div>
+      <div class="bank-row"><span class="bank-label">Bank Name:</span> ${s(bank.bankName || '-')}</div>
+      <div class="bank-row"><span class="bank-label">A/c No.:</span> <span style="font-family: monospace; font-weight: bold;">${s(bank.accountNumber || '-')}</span></div>
+      <div class="bank-row"><span class="bank-label">Branch &amp; IFS Code:</span> ${s(bank.branch || '-')}${bank.ifscCode ? ' / ' + bank.ifscCode : ''}</div>
       ${bank.upiId || business.upiId ? `<div class="bank-row"><span class="bank-label">UPI ID:</span> <span style="font-family: monospace;">${s(bank.upiId || business.upiId)}</span></div>` : ''}`;
 
     const upiId = bank.upiId || business.upiId || null;
     let upiQrHtml = '';
+    // Use remaining outstanding balance if partially paid, otherwise grandTotal
+    const qrAmount = Number(
+      invoice.outstandingAmount != null && Number(invoice.outstandingAmount) > 0
+        ? invoice.outstandingAmount
+        : grandTotal
+    );
+
     if (upiId && isValidUpiId(upiId)) {
       try {
         const upiQrDataUrl = await generateUpiQrDataUrl({
           upiId,
           payeeName: business.name,
-          amount: grandTotal,
+          amount: qrAmount,
           invoiceNumber: invoice.invoiceNumber,
           invoiceId: invoice.id,
         });
         if (upiQrDataUrl) {
           upiQrHtml = `
-            <div class="upi-qr-block" style="text-align: center; margin-left: 10px; flex-shrink: 0; border: 1px solid #000; padding: 4px; background: #fff;">
-              <img src="${upiQrDataUrl}" alt="UPI QR" style="width: 76px; height: 76px; display: block; margin: 0 auto;" />
-              <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">SCAN TO PAY (UPI)</div>
+            <div class="upi-qr-block" style="text-align: center; margin-left: 8px; flex-shrink: 0; border: 1px solid #000; padding: 3px; background: #fff;">
+              <img src="${upiQrDataUrl}" alt="UPI QR" style="width: 70px; height: 70px; display: block; margin: 0 auto;" />
+              <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">Scan &amp; Pay using any UPI app</div>
               <div style="font-size: 6pt; font-family: monospace; color: #111;">${s(upiId)}</div>
-              <div style="font-size: 5pt; color: #666; max-width: 95px; line-height: 1.1; margin-top: 2px;">Scan does not confirm payment; seller verification required.</div>
+              <div style="font-size: 5pt; color: #666; max-width: 95px; line-height: 1.1; margin-top: 1px;">Scan does not confirm payment; seller verification required.</div>
             </div>`;
         }
       } catch (qrErr) {
@@ -517,30 +545,32 @@ class PdfService {
     /* ── Top section: seller info (left) + invoice fields (right) ──────── */
     .top-section {
       display: grid;
-      grid-template-columns: 55% 45%;
+      grid-template-columns: 50% 50%;
       border-bottom: 1px solid #000;
     }
 
     .seller-block {
-      padding: 5px 6px;
+      padding: 4px 6px;
       border-right: 1px solid #000;
+      font-size: 8pt;
     }
 
     .seller-name {
-      font-size: 11pt;
+      font-size: 10pt;
       font-weight: bold;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
 
     .seller-detail {
-      font-size: 8.5pt;
+      font-size: 7.5pt;
       margin-bottom: 1px;
     }
 
-    /* ── Invoice fields table (right side) ──────────────────────────────── */
+    /* ── Invoice fields table (right side 4-column grid) ─────────────────── */
     .invoice-fields-table {
       width: 100%;
       height: 100%;
+      border-collapse: collapse;
     }
 
     .invoice-fields-table tr {
@@ -552,68 +582,68 @@ class PdfService {
     }
 
     .field-label {
-      padding: 2px 5px;
+      padding: 1.5px 3px;
       font-weight: bold;
-      white-space: nowrap;
-      width: 50%;
+      font-size: 7pt;
+      color: #333;
       border-right: 1px solid #000;
       vertical-align: top;
-      font-size: 8pt;
+      width: 22%;
+      background: #fafafa;
     }
 
     .field-value {
-      padding: 2px 5px;
+      padding: 1.5px 3px;
       vertical-align: top;
-      font-size: 8pt;
+      font-size: 7.5pt;
+      font-weight: 500;
+      border-right: 1px solid #000;
+      width: 28%;
     }
 
-    /* ── Consignee / Buyer section ───────────────────────────────────── */
+    .field-value:last-child {
+      border-right: none;
+    }
+
+    /* ── Consignee / Buyer section (side-by-side) ───────────────────── */
     .consignee-buyer-section {
       display: grid;
-      grid-template-columns: 55% 45%;
+      grid-template-columns: 50% 50%;
       border-bottom: 1px solid #000;
-    }
-
-    .consignee-buyer-left {
-      border-right: 1px solid #000;
     }
 
     .address-block {
       padding: 4px 6px;
-      min-height: 60px;
+      font-size: 7.5pt;
     }
 
-    .address-block:first-child {
-      border-bottom: 1px solid #000;
+    .address-block-left {
+      border-right: 1px solid #000;
     }
 
     .address-label {
-      font-size: 7.5pt;
+      font-size: 7pt;
       font-weight: bold;
       margin-bottom: 2px;
       text-transform: uppercase;
-      color: #333;
+      text-decoration: underline;
+      color: #222;
     }
 
     .address-name {
-      font-size: 9.5pt;
+      font-size: 8.5pt;
       font-weight: bold;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
 
     .address-detail {
-      font-size: 8pt;
+      font-size: 7.5pt;
       margin-bottom: 1px;
     }
 
     .address-gstin {
-      font-size: 8pt;
-      margin-top: 2px;
-    }
-
-    /* right side of consignee/buyer (spare area used for extra invoice fields in some formats) */
-    .consignee-buyer-right {
-      padding: 4px 6px;
+      font-size: 7.5pt;
+      margin-top: 1px;
     }
 
     /* ── Product table ───────────────────────────────────────────────── */
@@ -780,12 +810,19 @@ class PdfService {
 
     /* ── Print ───────────────────────────────────────────────────────── */
     @media print {
+      @page {
+        size: A4 portrait;
+        margin: 6mm;
+      }
       body { background: #fff; }
 
       .invoice-wrapper {
         border: 1px solid #000;
         box-shadow: none;
       }
+
+      thead { display: table-header-group; }
+      tr { page-break-inside: avoid; }
 
       /* Avoid page breaks inside key blocks */
       .amount-words-section,
@@ -823,31 +860,26 @@ class PdfService {
       </div>
     </div>
 
-    <!-- ── 3. CONSIGNEE + BUYER ───────────────────────────────────────── -->
+    <!-- ── 3. CONSIGNEE + BUYER (SIDE-BY-SIDE) ─────────────────────── -->
     <div class="consignee-buyer-section">
-      <div class="consignee-buyer-left">
-        <!-- Consignee (Ship to) -->
-        <div class="address-block">
-          <div class="address-label">Consignee (Ship to)</div>
-          <div class="address-name">${s(customer.name)}</div>
-          <div class="address-detail">${shipAddr}</div>
-          ${customer.gstin ? `<div class="address-gstin"><strong>GSTIN:</strong> ${customer.gstin}</div>` : ''}
-          ${customer.contactPerson ? `<div class="address-detail"><strong>Contact:</strong> ${s(customer.contactPerson)}</div>` : ''}
-        </div>
-
-        <!-- Buyer (Bill to) -->
-        <div class="address-block">
-          <div class="address-label">Buyer (Bill to)</div>
-          <div class="address-name">${s(customer.name)}</div>
-          <div class="address-detail">${billAddr}</div>
-          ${customer.gstin  ? `<div class="address-gstin"><strong>GSTIN:</strong> ${customer.gstin}</div>` : ''}
-          ${customer.phone  ? `<div class="address-detail"><strong>Ph:</strong> ${s(customer.phone)}</div>` : ''}
-        </div>
+      <!-- Consignee (Ship to) -->
+      <div class="address-block address-block-left">
+        <div class="address-label">Consignee (Ship to)</div>
+        <div class="address-name">${s(customer.name) || 'Walk-in / Cash Customer'}</div>
+        <div class="address-detail">${shipAddr || '-'}</div>
+        ${customer.gstin ? `<div class="address-gstin"><strong>GSTIN/UIN:</strong> ${customer.gstin}</div>` : ''}
+        ${customer.shippingState || customer.state ? `<div class="address-detail"><strong>State Name:</strong> ${s(customer.shippingState || customer.state)}${customer.shippingStateCode || customer.stateCode ? `, Code: ${customer.shippingStateCode || customer.stateCode}` : ''}</div>` : ''}
+        ${customer.contactPerson ? `<div class="address-detail"><strong>Contact:</strong> ${s(customer.contactPerson)}</div>` : ''}
       </div>
 
-      <!-- Right side of consignee/buyer block (spare / future use) -->
-      <div class="consignee-buyer-right">
-        <!-- intentionally blank – reserved for additional fields -->
+      <!-- Buyer (Bill to) -->
+      <div class="address-block address-block-right">
+        <div class="address-label">Buyer (Bill to)</div>
+        <div class="address-name">${s(customer.name) || 'Walk-in / Cash Customer'}</div>
+        <div class="address-detail">${billAddr || '-'}</div>
+        ${customer.gstin  ? `<div class="address-gstin"><strong>GSTIN/UIN:</strong> ${customer.gstin}</div>` : ''}
+        ${customer.billingState || customer.state ? `<div class="address-detail"><strong>State Name:</strong> ${s(customer.billingState || customer.state)}${customer.billingStateCode || customer.stateCode ? `, Code: ${customer.billingStateCode || customer.stateCode}` : ''}</div>` : ''}
+        ${customer.phone  ? `<div class="address-detail"><strong>Contact:</strong> ${s(customer.phone)}</div>` : ''}
       </div>
     </div>
 

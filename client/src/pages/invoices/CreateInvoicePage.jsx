@@ -53,8 +53,12 @@ export default function CreateInvoicePage() {
   const [dueDate, setDueDate] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('Net 30');
   const [deliveryNote, setDeliveryNote] = useState('');
+  const [deliveryNoteDate, setDeliveryNoteDate] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [referenceDate, setReferenceDate] = useState('');
+  const [otherReferences, setOtherReferences] = useState('');
   const [buyerOrderNumber, setBuyerOrderNumber] = useState('');
+  const [buyerOrderDate, setBuyerOrderDate] = useState('');
   const [dispatchDocNumber, setDispatchDocNumber] = useState('');
   const [dispatchedThrough, setDispatchedThrough] = useState('');
   const [destination, setDestination] = useState('');
@@ -235,8 +239,12 @@ export default function CreateInvoicePage() {
       dueDate: dueDate || undefined,
       paymentTerms: paymentTerms || undefined,
       deliveryNote: deliveryNote || undefined,
+      deliveryNoteDate: deliveryNoteDate || undefined,
       referenceNumber: referenceNumber || undefined,
+      referenceDate: referenceDate || undefined,
+      otherReferences: otherReferences || undefined,
       buyerOrderNumber: buyerOrderNumber || undefined,
+      buyerOrderDate: buyerOrderDate || undefined,
       dispatchDocNumber: dispatchDocNumber || undefined,
       dispatchedThrough: dispatchedThrough || undefined,
       destination: destination || undefined,
@@ -313,9 +321,13 @@ export default function CreateInvoicePage() {
       invoiceType,
       gstType,
       deliveryNote,
+      deliveryNoteDate,
       paymentTerms,
       referenceNumber,
+      referenceDate,
+      otherReferences,
       buyerOrderNumber,
+      buyerOrderDate,
       dispatchDocNumber,
       dispatchedThrough,
       destination,
@@ -666,67 +678,106 @@ export default function CreateInvoicePage() {
             </div>
           </div>
 
-          {/* Step 4: Dispatch & Reference Details (Collapsible) */}
+          {/* Step 4: Additional Invoice Details (Collapsible) */}
           <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs space-y-3">
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="w-full flex items-center justify-between text-left text-sm font-bold text-gray-900"
             >
-              <span>4. Dispatch & Order References (Optional)</span>
+              <span>4. Additional Invoice Details (Optional)</span>
               {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
             {showAdvanced && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t">
-                <Input
-                  label="Payment Terms"
-                  value={paymentTerms}
-                  onChange={(e) => setPaymentTerms(e.target.value)}
-                  placeholder="e.g. Net 30 / Advance"
-                />
-                <Input
-                  label="Delivery Note"
-                  value={deliveryNote}
-                  onChange={(e) => setDeliveryNote(e.target.value)}
-                  placeholder="e.g. DN-040"
-                />
-                <Input
-                  label="Reference No. & Date"
-                  value={referenceNumber}
-                  onChange={(e) => setReferenceNumber(e.target.value)}
-                  placeholder="e.g. REF/89"
-                />
-                <Input
-                  label="Buyer's Order No."
-                  value={buyerOrderNumber}
-                  onChange={(e) => setBuyerOrderNumber(e.target.value)}
-                  placeholder="PO-2024"
-                />
-                <Input
-                  label="Dispatch Doc No."
-                  value={dispatchDocNumber}
-                  onChange={(e) => setDispatchDocNumber(e.target.value)}
-                  placeholder="LR / Docket #"
-                />
-                <Input
-                  label="Dispatched Through"
-                  value={dispatchedThrough}
-                  onChange={(e) => setDispatchedThrough(e.target.value)}
-                  placeholder="e.g. VRL Logistics"
-                />
-                <Input
-                  label="Destination"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder="HYDERABAD"
-                />
-                <Input
-                  label="Terms of Delivery"
-                  value={termsOfDelivery}
-                  onChange={(e) => setTermsOfDelivery(e.target.value)}
-                  placeholder="e.g. Door Delivery"
-                />
+              <div className="space-y-4 pt-3 border-t">
+                {/* Reference Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    label="Reference No."
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                    placeholder="e.g. REF/89"
+                  />
+                  <Input
+                    label="Reference Date"
+                    type="date"
+                    value={referenceDate}
+                    onChange={(e) => setReferenceDate(e.target.value)}
+                  />
+                  <Input
+                    label="Other References"
+                    value={otherReferences}
+                    onChange={(e) => setOtherReferences(e.target.value)}
+                    placeholder="e.g. Tender/Project Ref"
+                  />
+                </div>
+
+                {/* Buyer Order & Payment Terms */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    label="Buyer's Order No."
+                    value={buyerOrderNumber}
+                    onChange={(e) => setBuyerOrderNumber(e.target.value)}
+                    placeholder="e.g. PO-2024-001"
+                  />
+                  <Input
+                    label="Buyer's Order Date"
+                    type="date"
+                    value={buyerOrderDate}
+                    onChange={(e) => setBuyerOrderDate(e.target.value)}
+                  />
+                  <Input
+                    label="Mode / Terms of Payment"
+                    value={paymentTerms}
+                    onChange={(e) => setPaymentTerms(e.target.value)}
+                    placeholder="e.g. Net 30 / Advance"
+                  />
+                </div>
+
+                {/* Delivery Note & Dispatch */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    label="Delivery Note"
+                    value={deliveryNote}
+                    onChange={(e) => setDeliveryNote(e.target.value)}
+                    placeholder="e.g. DN-040"
+                  />
+                  <Input
+                    label="Delivery Note Date"
+                    type="date"
+                    value={deliveryNoteDate}
+                    onChange={(e) => setDeliveryNoteDate(e.target.value)}
+                  />
+                  <Input
+                    label="Dispatch Doc No."
+                    value={dispatchDocNumber}
+                    onChange={(e) => setDispatchDocNumber(e.target.value)}
+                    placeholder="LR / Docket #"
+                  />
+                </div>
+
+                {/* Transport & Destination */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    label="Dispatched Through"
+                    value={dispatchedThrough}
+                    onChange={(e) => setDispatchedThrough(e.target.value)}
+                    placeholder="e.g. VRL Logistics / By Road"
+                  />
+                  <Input
+                    label="Destination"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="e.g. HYDERABAD"
+                  />
+                  <Input
+                    label="Terms of Delivery"
+                    value={termsOfDelivery}
+                    onChange={(e) => setTermsOfDelivery(e.target.value)}
+                    placeholder="e.g. Door Delivery / Ex-Works"
+                  />
+                </div>
               </div>
             )}
           </div>

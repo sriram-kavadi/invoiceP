@@ -77,6 +77,10 @@ export default function BusinessSettingsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.upiId && !/^[\w.-]+@[\w.-]+$/.test(formData.upiId)) {
+      toast.error('Please enter a valid UPI ID (e.g. name@bank or 9876543210@upi)');
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.put('/business/profile', formData);
