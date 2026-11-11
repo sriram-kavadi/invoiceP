@@ -56,3 +56,4 @@ export async function generateUpiQrDataUrl(params) {
     return null;
   }
 }
+
