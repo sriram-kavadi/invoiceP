@@ -46,7 +46,7 @@ export default function DashboardLayout({ children }) {
   };
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-gray-50 overflow-hidden">
+    <div className="h-screen w-full flex flex-col md:pl-64 bg-gray-50 overflow-hidden sidebar-layout-container">
       {/* Mobile top bar */}
       <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
@@ -73,10 +73,10 @@ export default function DashboardLayout({ children }) {
         />
       )}
 
-      {/* Sidebar: Fixed on desktop, sliding drawer on mobile */}
+      {/* Sidebar: Fixed on desktop to viewport (100vh), sliding drawer on mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 shadow-xl md:shadow-none transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-50 md:z-30 w-64 h-screen bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transition-transform duration-200 ease-in-out md:translate-x-0 ${
+          mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:shadow-none'
         }`}
       >
         {/* Brand */}
@@ -117,8 +117,8 @@ export default function DashboardLayout({ children }) {
           )}
         </div>
 
-        {/* Nav Links - Scrollable */}
-        <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {/* Nav Links - Scrollable only if navigation exceeds height */}
+        <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto overflow-x-hidden">
           {navigation.map((item) => {
             const active = isActive(item.href);
             return (
@@ -168,7 +168,7 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* User Card & Logout - Pinned to bottom */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
+        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0 mt-auto">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 font-bold text-xs flex items-center justify-center flex-shrink-0 border border-primary-200">
               {user?.name ? user.name.slice(0, 2).toUpperCase() : 'U'}
@@ -192,7 +192,7 @@ export default function DashboardLayout({ children }) {
       </aside>
 
       {/* Main Content Area - Independently scrollable */}
-      <main className="flex-1 h-[calc(100vh-57px)] md:h-screen overflow-y-auto min-w-0 flex flex-col bg-gray-50">
+      <main className="flex-1 w-full h-[calc(100vh-57px)] md:h-screen overflow-y-auto overscroll-contain min-w-0 flex flex-col bg-gray-50">
         <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
           {children || <Outlet />}
         </div>

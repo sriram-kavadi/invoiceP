@@ -6,9 +6,19 @@
   * {
     box-sizing: border-box;
   }
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
   body {
     font-family: 'Inter', system-ui, sans-serif;
     @apply bg-gray-50 text-gray-900;
+    overflow-x: hidden;
+  }
+  #root {
+    height: 100%;
   }
 }
 
@@ -60,17 +70,25 @@
 
 /* ── Print Media Styles ─────────────────────────────────────────── */
 @media print {
-  body {
+  body, html {
     background: #fff !important;
     color: #000 !important;
+    overflow: visible !important;
+    height: auto !important;
   }
   aside, nav, .no-print {
     display: none !important;
+  }
+  .sidebar-layout-container {
+    padding-left: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
   main {
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
+    height: auto !important;
     max-width: 100% !important;
   }
 }
