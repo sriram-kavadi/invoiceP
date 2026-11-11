@@ -30,7 +30,11 @@ export default function LoginPage() {
         navigate('/dashboard');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || 'Login failed');
+      const errorMsg =
+        (typeof err.response?.data === 'string' && err.response.data.trim())
+          ? err.response.data.slice(0, 120)
+          : err.response?.data?.message || err.message || 'Login failed';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }

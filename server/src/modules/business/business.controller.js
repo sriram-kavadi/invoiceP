@@ -25,8 +25,6 @@ export const logoUpload = multer({
   fileFilter: logoFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-});
 
 // ─── Multer setup for UPI QR code uploads (PNG, JPG, JPEG only - Memory Storage) ──
 // Uses in-memory storage to prevent local filesystem writes on Vercel/serverless environments
