@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { numberToWords, formatIndianCurrency, formatDate } from '../../utils/helpers';
+import { generateUpiQrDataUrl, isValidUpiId } from '../../utils/upi';
 
 export default function InvoicePreview({ invoiceData }) {
   if (!invoiceData) {
@@ -17,6 +18,30 @@ export default function InvoicePreview({ invoiceData }) {
 
   // Amount in words
   const words = numberToWords(invoice.grandTotal || 0);
+
+  // UPI QR Code
+  const upiId = bankAccount.upiId || business.upiId || null;
+  const [upiQrUrl, setUpiQrUrl] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (upiId && isValidUpiId(upiId)) {
+      generateUpiQrDataUrl({
+        upiId,
+        payeeName: business.name,
+        amount: invoice.grandTotal,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceId: invoice.id,
+      }).then((url) => {
+        if (isMounted) setUpiQrUrl(url);
+      });
+    } else {
+      setUpiQrUrl(null);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [upiId, business.name, invoice.grandTotal, invoice.invoiceNumber, invoice.id]);
 
   return (
     <div className="bg-white text-black text-[11px] leading-tight font-sans p-6 max-w-4xl mx-auto shadow-md border border-gray-300 print:shadow-none print:border-none print:p-0 print:m-0 print:text-[10px]">
@@ -273,17 +298,32 @@ export default function InvoicePreview({ invoiceData }) {
 
       {/* ── 7. BANK DETAILS & SIGNATURE (2-COLUMN) ───────────────────── */}
       <div className="grid grid-cols-2 border-b border-black">
-        {/* Left: Bank Details & Declaration */}
-        <div className="p-2 border-r border-black space-y-2">
-          <div className="space-y-0.5">
-            <div className="font-bold underline text-[10px]">Company's Bank Details</div>
-            <div><span className="text-gray-500">A/c Holder's Name:</span> <span className="font-semibold">{bankAccount.accountHolder || business.name || '-'}</span></div>
-            <div><span className="text-gray-500">Bank Name:</span> <span className="font-semibold">{bankAccount.bankName || '-'}</span></div>
-            <div><span className="text-gray-500">A/c No.:</span> <span className="font-bold font-mono">{bankAccount.accountNumber || '-'}</span></div>
-            <div><span className="text-gray-500">Branch & IFS Code:</span> <span className="font-semibold">{bankAccount.branch || '-'} & <span className="font-mono">{bankAccount.ifscCode || '-'}</span></span></div>
+        {/* Left: Bank Details, UPI QR & Declaration */}
+        <div className="p-2 border-r border-black flex flex-col justify-between">
+          <div className="flex justify-between items-start gap-2">
+            <div className="space-y-0.5 flex-1">
+              <div className="font-bold underline text-[10px]">Company's Bank Details</div>
+              <div><span className="text-gray-500">A/c Holder:</span> <span className="font-semibold">{bankAccount.accountHolder || business.name || '-'}</span></div>
+              <div><span className="text-gray-500">Bank Name:</span> <span className="font-semibold">{bankAccount.bankName || '-'}</span></div>
+              <div><span className="text-gray-500">A/c No.:</span> <span className="font-bold font-mono">{bankAccount.accountNumber || '-'}</span></div>
+              <div><span className="text-gray-500">Branch & IFS:</span> <span className="font-semibold">{bankAccount.branch || '-'} & <span className="font-mono">{bankAccount.ifscCode || '-'}</span></span></div>
+              {upiId && (
+                <div><span className="text-gray-500">UPI ID:</span> <span className="font-mono font-semibold">{upiId}</span></div>
+              )}
+            </div>
+
+            {/* UPI QR Code Block */}
+            {upiQrUrl && (
+              <div className="text-center p-1 border border-black rounded bg-white flex-shrink-0">
+                <img src={upiQrUrl} alt="UPI QR" className="w-16 h-16 mx-auto block" />
+                <div className="text-[8px] font-bold mt-0.5 tracking-tight">SCAN TO PAY</div>
+                <div className="text-[6.5px] font-mono text-gray-700 truncate max-w-[85px]">{upiId}</div>
+                <div className="text-[5.5px] text-gray-500 leading-tight">Seller confirmation req.</div>
+              </div>
+            )}
           </div>
 
-          <div className="pt-2 border-t border-gray-300">
+          <div className="pt-2 border-t border-gray-300 mt-2">
             <div className="font-bold underline text-[10px]">Declaration</div>
             <p className="text-[9px] text-gray-700 italic">
               {business.declaration ||

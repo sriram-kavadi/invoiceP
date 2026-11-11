@@ -597,7 +597,16 @@ export const downloadPdf = async (req, res, next) => {
       bankAccount: defaultBank,
     };
 
-    const pdfBuffer = await pdfService.generateInvoicePdf(invoiceData);
+    let pdfBuffer;
+    try {
+      pdfBuffer = await pdfService.generateInvoicePdf(invoiceData);
+    } catch (pdfErr) {
+      console.warn('[PDF Generation Warning] Serverless browser unavailable, sending printable HTML:', pdfErr.message);
+      const html = await pdfService.generateInvoiceHtml(invoiceData);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('X-Fallback-Print', 'true');
+      return res.send(html);
+    }
 
     const filename = `${invoice.invoiceNumber.replace(/[\/\\:]/g, '_')}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
@@ -636,7 +645,7 @@ export const getPreviewHtml = async (req, res, next) => {
       bankAccount: defaultBank,
     };
 
-    const html = pdfService.generateInvoiceHtml(invoiceData);
+    const html = await pdfService.generateInvoiceHtml(invoiceData);
     res.setHeader('Content-Type', 'text/html');
     return res.send(html);
   } catch (err) {
@@ -753,7 +762,7 @@ export const getSharedInvoice = async (req, res, next) => {
       bankAccount: defaultBank,
     };
 
-    const html = pdfService.generateInvoiceHtml(invoiceData);
+    const html = await pdfService.generateInvoiceHtml(invoiceData);
     res.setHeader('Content-Type', 'text/html');
     return res.send(html);
   } catch (err) {

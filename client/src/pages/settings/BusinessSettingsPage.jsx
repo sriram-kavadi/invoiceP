@@ -25,6 +25,7 @@ export default function BusinessSettingsPage() {
     isGstRegistered: false,
     gstin: '',
     pan: '',
+    upiId: '',
     authorizedSignatory: '',
     jurisdiction: 'HYDERABAD',
     declaration: 'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
@@ -50,6 +51,7 @@ export default function BusinessSettingsPage() {
             isGstRegistered: Boolean(b.isGstRegistered),
             gstin: b.gstin || '',
             pan: b.pan || '',
+            upiId: b.upiId || '',
             authorizedSignatory: b.authorizedSignatory || '',
             jurisdiction: b.jurisdiction || 'HYDERABAD',
             declaration: b.declaration || '',
@@ -294,6 +296,14 @@ export default function BusinessSettingsPage() {
               helperText="Printed as: SUBJECT TO [CITY] JURISDICTION"
             />
           </div>
+
+          <Input
+            label="Default Business UPI ID (for QR Code Payment)"
+            value={formData.upiId}
+            onChange={(e) => handleChange('upiId', e.target.value.toLowerCase().trim())}
+            placeholder="e.g. mybusiness@okaxis or 9876543210@upi"
+            helperText="Generates an invoice-specific UPI QR code on your PDF for seamless customer payments."
+          />
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">

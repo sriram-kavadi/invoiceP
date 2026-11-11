@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
+import { generateUpiQrDataUrl, isValidUpiId } from '../utils/upi.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -119,7 +120,7 @@ class PdfService {
    * Generate a PDF from invoice data, write to outputPath, and return the Buffer.
    */
   async generateInvoicePdf(invoiceData, outputPath) {
-    const html = this.generateInvoiceHtml(invoiceData);
+    const html = await this.generateInvoiceHtml(invoiceData);
 
     let browser;
     try {
@@ -193,7 +194,7 @@ class PdfService {
   /**
    * Build the complete HTML string for the invoice.
    */
-  generateInvoiceHtml(invoiceData) {
+  async generateInvoiceHtml(invoiceData) {
     const { invoice, business, customer, bankAccount } = invoiceData;
 
     // ── Derived flags ────────────────────────────────────────────────────────
@@ -426,13 +427,39 @@ class PdfService {
       s(business.state) + (business.stateCode ? ` - ${business.stateCode}` : ''),
     ].filter(Boolean).join(', ');
 
-    // ── Bank details ─────────────────────────────────────────────────────────
+    // ── Bank details & UPI QR ─────────────────────────────────────────────────
     const bank = bankAccount || {};
     const bankDetailsHtml = `
       <div class="bank-row"><span class="bank-label">A/c Holder:</span> ${s(bank.accountHolder)}</div>
       <div class="bank-row"><span class="bank-label">Bank Name:</span> ${s(bank.bankName)}</div>
       <div class="bank-row"><span class="bank-label">A/c No.:</span> ${s(bank.accountNumber)}</div>
-      <div class="bank-row"><span class="bank-label">Branch &amp; IFS Code:</span> ${s(bank.branch)}${bank.ifscCode ? ' / ' + bank.ifscCode : ''}</div>`;
+      <div class="bank-row"><span class="bank-label">Branch &amp; IFS Code:</span> ${s(bank.branch)}${bank.ifscCode ? ' / ' + bank.ifscCode : ''}</div>
+      ${bank.upiId || business.upiId ? `<div class="bank-row"><span class="bank-label">UPI ID:</span> <span style="font-family: monospace;">${s(bank.upiId || business.upiId)}</span></div>` : ''}`;
+
+    const upiId = bank.upiId || business.upiId || null;
+    let upiQrHtml = '';
+    if (upiId && isValidUpiId(upiId)) {
+      try {
+        const upiQrDataUrl = await generateUpiQrDataUrl({
+          upiId,
+          payeeName: business.name,
+          amount: grandTotal,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceId: invoice.id,
+        });
+        if (upiQrDataUrl) {
+          upiQrHtml = `
+            <div class="upi-qr-block" style="text-align: center; margin-left: 10px; flex-shrink: 0; border: 1px solid #000; padding: 4px; background: #fff;">
+              <img src="${upiQrDataUrl}" alt="UPI QR" style="width: 76px; height: 76px; display: block; margin: 0 auto;" />
+              <div style="font-size: 6.5pt; font-weight: bold; margin-top: 2px;">SCAN TO PAY (UPI)</div>
+              <div style="font-size: 6pt; font-family: monospace; color: #111;">${s(upiId)}</div>
+              <div style="font-size: 5pt; color: #666; max-width: 95px; line-height: 1.1; margin-top: 2px;">Scan does not confirm payment; seller verification required.</div>
+            </div>`;
+        }
+      } catch (qrErr) {
+        console.warn('[PDF Service] QR generation skipped:', qrErr.message);
+      }
+    }
 
     // ── Declaration ──────────────────────────────────────────────────────────
     const declaration = s(business.declaration) ||
@@ -862,11 +889,14 @@ class PdfService {
 
     <!-- ── 7. BOTTOM: BANK DETAILS + SIGNATORY ───────────────────────── -->
     <div class="bottom-section">
-      <!-- Bank Details + Declaration -->
-      <div class="bank-details-block">
-        <div class="bank-section-title">Company's Bank Details</div>
-        ${bankDetailsHtml}
-        <div class="declaration-text">${declaration}</div>
+      <!-- Bank Details + UPI QR + Declaration -->
+      <div class="bank-details-block" style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="flex: 1;">
+          <div class="bank-section-title">Company's Bank Details</div>
+          ${bankDetailsHtml}
+          <div class="declaration-text">${declaration}</div>
+        </div>
+        ${upiQrHtml}
       </div>
 
       <!-- PAN + Signatory -->

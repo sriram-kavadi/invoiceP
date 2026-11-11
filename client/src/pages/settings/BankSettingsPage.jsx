@@ -18,6 +18,7 @@ export default function BankSettingsPage() {
     accountNumber: '',
     ifscCode: '',
     branch: '',
+    upiId: '',
     isDefault: true,
   });
 
@@ -60,6 +61,7 @@ export default function BankSettingsPage() {
           accountNumber: '',
           ifscCode: '',
           branch: '',
+          upiId: '',
           isDefault: false,
         });
         fetchAccounts();
@@ -130,6 +132,9 @@ export default function BankSettingsPage() {
                 <p><span className="text-gray-400">Holder:</span> <span className="font-semibold text-gray-900">{b.accountHolder}</span></p>
                 <p><span className="text-gray-400">Account No:</span> <span className="font-mono font-bold text-gray-900">{b.accountNumber}</span></p>
                 <p><span className="text-gray-400">IFSC Code:</span> <span className="font-mono font-bold text-gray-900">{b.ifscCode}</span></p>
+                {b.upiId && (
+                  <p><span className="text-gray-400">UPI ID:</span> <span className="font-mono font-semibold text-green-700">{b.upiId}</span></p>
+                )}
               </div>
 
               <div className="flex justify-end pt-2">
@@ -189,6 +194,14 @@ export default function BankSettingsPage() {
               placeholder="e.g. SANATHNAGAR"
             />
           </div>
+
+          <Input
+            label="Business UPI ID (for QR Code Payment)"
+            value={formData.upiId}
+            onChange={(e) => setFormData({ ...formData, upiId: e.target.value.toLowerCase().trim() })}
+            placeholder="e.g. yourbusiness@okaxis or 9876543210@upi"
+            helperText="Generates an invoice-specific UPI QR code on your PDF for seamless customer payments."
+          />
 
           <label className="flex items-center gap-2 cursor-pointer pt-2">
             <input

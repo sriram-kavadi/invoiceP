@@ -29,6 +29,12 @@ export const onboardSchema = z.object({
     .optional()
     .or(z.literal('')),
   isGstRegistered: z.boolean().optional().default(false),
+  upiId: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/, 'Invalid UPI ID (e.g. name@bank or 9876543210@upi)')
+    .optional()
+    .or(z.literal('')),
   authorizedSignatory: z.string().trim().optional(),
   jurisdiction: z.string().trim().optional(),
   declaration: z.string().trim().optional(),
@@ -60,6 +66,12 @@ export const updateProfileSchema = z.object({
     .optional()
     .or(z.literal('')),
   isGstRegistered: z.boolean().optional(),
+  upiId: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/, 'Invalid UPI ID (e.g. name@bank or 9876543210@upi)')
+    .optional()
+    .or(z.literal('')),
   authorizedSignatory: z.string().trim().optional(),
   jurisdiction: z.string().trim().optional(),
   declaration: z.string().trim().optional(),
@@ -75,6 +87,7 @@ export const updateSettingsSchema = z.object({
   roundOffEnabled: z.boolean().optional(),
   defaultDueDays: z.number().int().min(0).optional(),
   showBankDetails: z.boolean().optional(),
+  showUpiQr: z.boolean().optional(),
   showSignature: z.boolean().optional(),
   showFooterNote: z.boolean().optional(),
   footerNote: z.string().trim().optional(),
@@ -101,5 +114,11 @@ export const bankAccountSchema = z.object({
     .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code format (e.g. SBIN0001234)')
     .or(z.string().trim().min(1, 'IFSC code is required')),
   branch: z.string().trim().optional(),
+  upiId: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/, 'Invalid UPI ID (e.g. name@bank or 9876543210@upi)')
+    .optional()
+    .or(z.literal('')),
   isDefault: z.boolean().optional().default(false),
 });

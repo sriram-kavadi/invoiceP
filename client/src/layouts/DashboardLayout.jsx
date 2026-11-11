@@ -46,9 +46,9 @@ export default function DashboardLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+    <div className="h-screen flex flex-col md:flex-row bg-gray-50 overflow-hidden">
       {/* Mobile top bar */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold text-sm shadow">
             IH
@@ -58,33 +58,52 @@ export default function DashboardLayout({ children }) {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="text-gray-500 hover:text-gray-700 p-1"
+          className="text-gray-500 hover:text-gray-700 p-1 rounded-md focus:outline-none"
+          aria-label="Toggle Navigation"
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
-      {/* Sidebar Desktop */}
+      {/* Mobile backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-gray-900/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar: Fixed on desktop, sliding drawer on mobile */}
       <aside
-        className={`${
-          mobileMenuOpen ? 'block' : 'hidden'
-        } md:block fixed md:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col shadow-sm md:shadow-none`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 shadow-xl md:shadow-none transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
         {/* Brand */}
-        <div className="p-6 border-b border-gray-100 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white font-black text-lg shadow-md shadow-primary-500/20">
-            IH
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white font-black text-lg shadow-md shadow-primary-500/20">
+              IH
+            </div>
+            <div>
+              <h1 className="font-black text-gray-900 text-lg leading-tight tracking-tight">
+                InvoiceHub
+              </h1>
+              <p className="text-xs text-gray-400 font-medium">Multi-Business Invoicing</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-black text-gray-900 text-lg leading-tight tracking-tight">
-              InvoiceHub
-            </h1>
-            <p className="text-xs text-gray-400 font-medium">Multi-Business Invoicing</p>
-          </div>
+          {/* Close button inside drawer for mobile */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(false)}
+            className="md:hidden text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Business Selector Pill */}
-        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex-shrink-0">
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">
             Current Business
           </div>
@@ -98,7 +117,7 @@ export default function DashboardLayout({ children }) {
           )}
         </div>
 
-        {/* Nav Links */}
+        {/* Nav Links - Scrollable */}
         <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navigation.map((item) => {
             const active = isActive(item.href);
@@ -148,8 +167,8 @@ export default function DashboardLayout({ children }) {
           })}
         </div>
 
-        {/* User Card & Logout */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+        {/* User Card & Logout - Pinned to bottom */}
+        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 font-bold text-xs flex items-center justify-center flex-shrink-0 border border-primary-200">
               {user?.name ? user.name.slice(0, 2).toUpperCase() : 'U'}
@@ -172,8 +191,8 @@ export default function DashboardLayout({ children }) {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 min-w-0 flex flex-col min-h-screen">
+      {/* Main Content Area - Independently scrollable */}
+      <main className="flex-1 h-[calc(100vh-57px)] md:h-screen overflow-y-auto min-w-0 flex flex-col bg-gray-50">
         <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
           {children || <Outlet />}
         </div>

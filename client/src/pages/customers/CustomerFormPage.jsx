@@ -13,6 +13,7 @@ export default function CustomerFormPage() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [formData, setFormData] = useState({
     name: '',
@@ -57,7 +58,18 @@ export default function CustomerFormPage() {
     }
   }, [id, isEdit]);
 
+  const clearFieldError = (field) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
   const handleChange = (field, value) => {
+    clearFieldError(field);
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
       if (field === 'billingState') {
@@ -78,24 +90,91 @@ export default function CustomerFormPage() {
     });
   };
 
+  const validateCustomer = () => {
+    const errors = {};
+    if (!formData.name?.trim()) {
+      errors.name = 'Customer / Company name is required';
+    }
+
+    const gstin = formData.gstin?.trim();
+    if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
+      errors.gstin = 'Invalid GSTIN format (15 characters, e.g. 36AABCU9603R1ZM)';
+    }
+
+    const pan = formData.pan?.trim();
+    if (pan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan)) {
+      errors.pan = 'Invalid PAN format (10 characters, e.g. ABCDE1234F)';
+    }
+
+    const email = formData.email?.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = 'Please enter a valid email address (e.g. buyer@example.com)';
+    }
+
+    const phone = formData.phone?.trim();
+    if (phone && !/^[0-9+\-\s]{7,15}$/.test(phone)) {
+      errors.phone = 'Phone number must be between 7 and 15 digits';
+    }
+
+    const billPin = formData.billingPincode?.trim();
+    if (billPin && !/^\d{6}$/.test(billPin)) {
+      errors.billingPincode = 'Pincode must be 6 digits';
+    }
+
+    if (!formData.sameAsShipping) {
+      const shipPin = formData.shippingPincode?.trim();
+      if (shipPin && !/^\d{6}$/.test(shipPin)) {
+        errors.shippingPincode = 'Pincode must be 6 digits';
+      }
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error('Customer name is required');
+    if (!validateCustomer()) {
+      toast.error('Please fix the highlighted errors before saving');
       return;
     }
 
     setLoading(true);
     try {
+      const payload = {
+        ...formData,
+        name: formData.name.trim(),
+        gstin: formData.gstin?.trim() || undefined,
+        pan: formData.pan?.trim() || undefined,
+        email: formData.email?.trim() || undefined,
+        phone: formData.phone?.trim() || undefined,
+        billingPincode: formData.billingPincode?.trim() || undefined,
+        shippingPincode: formData.shippingPincode?.trim() || undefined,
+      };
+
       if (isEdit) {
-        await api.put(`/customers/${id}`, formData);
+        await api.put(`/customers/${id}`, payload);
         toast.success('Customer updated successfully');
       } else {
-        await api.post('/customers', formData);
+        await api.post('/customers', payload);
         toast.success('Customer created successfully');
       }
       navigate('/customers');
     } catch (err) {
+      const serverErrors = err.response?.data?.errors;
+      if (Array.isArray(serverErrors)) {
+        const mapped = {};
+        for (const item of serverErrors) {
+          mapped[item.field] = item.message;
+        }
+        setFieldErrors(mapped);
+      } else if (serverErrors && typeof serverErrors === 'object') {
+        const mapped = {};
+        for (const [k, v] of Object.entries(serverErrors)) {
+          mapped[k] = Array.isArray(v) ? v[0] : String(v);
+        }
+        setFieldErrors(mapped);
+      }
       toast.error(err.response?.data?.message || 'Operation failed');
     } finally {
       setLoading(false);
@@ -134,6 +213,7 @@ export default function CustomerFormPage() {
               label="Customer / Business Name"
               required
               value={formData.name}
+              error={fieldErrors.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="e.g. LALITHA ENTERPRICESES"
             />
@@ -156,6 +236,7 @@ export default function CustomerFormPage() {
             <Input
               label="GSTIN (15 characters)"
               value={formData.gstin || ''}
+              error={fieldErrors.gstin}
               onChange={(e) => handleChange('gstin', e.target.value.toUpperCase())}
               placeholder="e.g. 36CBYPB9870Q1ZE"
               maxLength={15}
@@ -163,6 +244,7 @@ export default function CustomerFormPage() {
             <Input
               label="PAN"
               value={formData.pan || ''}
+              error={fieldErrors.pan}
               onChange={(e) => handleChange('pan', e.target.value.toUpperCase())}
               placeholder="e.g. CBYPB9870Q"
               maxLength={10}
@@ -173,6 +255,7 @@ export default function CustomerFormPage() {
             <Input
               label="Contact Person"
               value={formData.contactPerson || ''}
+              error={fieldErrors.contactPerson}
               onChange={(e) => handleChange('contactPerson', e.target.value)}
               placeholder="e.g. CHANDERSEKHAR"
             />
@@ -180,6 +263,7 @@ export default function CustomerFormPage() {
               label="Phone Number"
               type="tel"
               value={formData.phone || ''}
+              error={fieldErrors.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
               placeholder="e.g. 8341249579"
             />
@@ -187,6 +271,7 @@ export default function CustomerFormPage() {
               label="Email"
               type="email"
               value={formData.email || ''}
+              error={fieldErrors.email}
               onChange={(e) => handleChange('email', e.target.value)}
               placeholder="billing@customer.com"
             />
@@ -230,8 +315,10 @@ export default function CustomerFormPage() {
             <Input
               label="Pincode"
               value={formData.billingPincode || ''}
+              error={fieldErrors.billingPincode}
               onChange={(e) => handleChange('billingPincode', e.target.value)}
               placeholder="500088"
+              maxLength={6}
             />
           </div>
         </div>
@@ -286,8 +373,10 @@ export default function CustomerFormPage() {
                 <Input
                   label="Pincode"
                   value={formData.shippingPincode || ''}
+                  error={fieldErrors.shippingPincode}
                   onChange={(e) => handleChange('shippingPincode', e.target.value)}
                   placeholder="Pincode"
+                  maxLength={6}
                 />
               </div>
             </div>

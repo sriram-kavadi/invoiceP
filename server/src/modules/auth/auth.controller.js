@@ -51,13 +51,17 @@ export async function register(req, res) {
     });
   }
 
-  const { name, email, password, businessId, role } = result.data;
+  const { name, email, password, phone, businessId, role } = result.data;
 
   try {
     // Reject duplicate emails
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ success: false, message: 'Email already in use' });
+      return res.status(409).json({
+        success: false,
+        message: 'An account with this email already exists',
+        errors: { email: ['An account with this email address already exists. Please sign in instead.'] },
+      });
     }
 
     const passwordHash = await hashPassword(password);
@@ -65,7 +69,7 @@ export async function register(req, res) {
     // Create the User (and optionally BusinessUser) in one transaction
     const user = await prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
-        data: { name, email, passwordHash },
+        data: { name, email, passwordHash, phone: phone || null },
       });
 
       if (businessId) {

@@ -223,7 +223,7 @@ export const listBankAccounts = async (req, res, next) => {
 
 export const addBankAccount = async (req, res, next) => {
   try {
-    const { accountHolder, bankName, accountNumber, ifscCode, branch, isDefault } = req.body;
+    const { accountHolder, bankName, accountNumber, ifscCode, branch, upiId, isDefault } = req.body;
 
     const result = await prisma.$transaction(async (tx) => {
       // If this account is being set as default, unset current default
@@ -242,6 +242,7 @@ export const addBankAccount = async (req, res, next) => {
           accountNumber,
           ifscCode,
           branch: branch || null,
+          upiId: upiId ? upiId.trim() : null,
           isDefault: isDefault ?? false,
         },
       });
@@ -270,7 +271,7 @@ export const updateBankAccount = async (req, res, next) => {
       return error(res, 'Bank account not found.', 404);
     }
 
-    const { accountHolder, bankName, accountNumber, ifscCode, branch, isDefault } = req.body;
+    const { accountHolder, bankName, accountNumber, ifscCode, branch, upiId, isDefault } = req.body;
 
     const result = await prisma.$transaction(async (tx) => {
       // If setting as default, unset all others first
@@ -289,6 +290,7 @@ export const updateBankAccount = async (req, res, next) => {
           ...(accountNumber !== undefined && { accountNumber }),
           ...(ifscCode !== undefined && { ifscCode }),
           ...(branch !== undefined && { branch: branch || null }),
+          ...(upiId !== undefined && { upiId: upiId ? upiId.trim() : null }),
           ...(isDefault !== undefined && { isDefault }),
         },
       });

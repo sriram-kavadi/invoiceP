@@ -74,6 +74,7 @@ model Business {
   pan                  String?
   isGstRegistered      Boolean      @default(false)
   logoPath             String?
+  upiId                String?
   authorizedSignatory  String?
   jurisdiction         String?
   declaration          String?      @default("We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.")
@@ -115,6 +116,7 @@ model BusinessSettings {
   roundOffEnabled        Boolean  @default(true)
   defaultDueDays         Int      @default(30)
   showBankDetails        Boolean  @default(true)
+  showUpiQr              Boolean  @default(true)
   showSignature          Boolean  @default(true)
   showFooterNote         Boolean  @default(true)
   footerNote             String?  @default("This is a Computer Generated Invoice")
@@ -132,6 +134,7 @@ model BusinessBankAccount {
   accountNumber   String
   ifscCode        String
   branch          String?
+  upiId           String?
   isDefault       Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

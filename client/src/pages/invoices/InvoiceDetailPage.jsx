@@ -55,6 +55,21 @@ export default function InvoiceDetailPage() {
     try {
       toast.loading('Preparing PDF...', { id: 'pdf' });
       const res = await api.get(`/invoices/${id}/pdf`, { responseType: 'blob' });
+
+      const contentType = res.headers['content-type'] || res.data.type || '';
+      if (contentType.includes('text/html') || res.headers['x-fallback-print']) {
+        const htmlText = await res.data.text();
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(htmlText);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => { printWindow.print(); }, 400);
+          toast.success('Invoice ready for printing or saving as PDF!', { id: 'pdf' });
+          return;
+        }
+      }
+
       const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
@@ -64,7 +79,9 @@ export default function InvoiceDetailPage() {
       link.remove();
       toast.success('PDF downloaded!', { id: 'pdf' });
     } catch (err) {
-      toast.error('Failed to download PDF', { id: 'pdf' });
+      console.error('PDF download error:', err);
+      window.print();
+      toast.success('Print dialog opened. Select "Save as PDF" to save.', { id: 'pdf' });
     }
   };
 

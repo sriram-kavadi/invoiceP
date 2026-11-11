@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS "Business" (
     "pan" TEXT,
     "isGstRegistered" BOOLEAN NOT NULL DEFAULT false,
     "logoPath" TEXT,
+    "upiId" TEXT,
     "authorizedSignatory" TEXT,
     "jurisdiction" TEXT,
     "declaration" TEXT DEFAULT 'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
@@ -116,6 +117,7 @@ CREATE TABLE IF NOT EXISTS "BusinessSettings" (
     "roundOffEnabled" BOOLEAN NOT NULL DEFAULT true,
     "defaultDueDays" INTEGER NOT NULL DEFAULT 30,
     "showBankDetails" BOOLEAN NOT NULL DEFAULT true,
+    "showUpiQr" BOOLEAN NOT NULL DEFAULT true,
     "showSignature" BOOLEAN NOT NULL DEFAULT true,
     "showFooterNote" BOOLEAN NOT NULL DEFAULT true,
     "footerNote" TEXT DEFAULT 'This is a Computer Generated Invoice',
@@ -135,6 +137,7 @@ CREATE TABLE IF NOT EXISTS "BusinessBankAccount" (
     "accountNumber" TEXT NOT NULL,
     "ifscCode" TEXT NOT NULL,
     "branch" TEXT,
+    "upiId" TEXT,
     "isDefault" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -142,6 +145,11 @@ CREATE TABLE IF NOT EXISTS "BusinessBankAccount" (
     CONSTRAINT "BusinessBankAccount_pkey" PRIMARY KEY ("id")
 );
 ALTER TABLE "BusinessBankAccount" ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP;
+
+-- Safe migrations for UPI QR Code support (Idempotent)
+ALTER TABLE "Business" ADD COLUMN IF NOT EXISTS "upiId" TEXT;
+ALTER TABLE "BusinessSettings" ADD COLUMN IF NOT EXISTS "showUpiQr" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "BusinessBankAccount" ADD COLUMN IF NOT EXISTS "upiId" TEXT;
 
 -- Customer Table
 CREATE TABLE IF NOT EXISTS "Customer" (

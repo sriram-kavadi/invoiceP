@@ -14,27 +14,78 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  const clearFieldError = (field) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      errors.name = 'Full name is required';
+    } else if (trimmedName.length < 2) {
+      errors.name = 'Name must be at least 2 characters long';
+    }
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      errors.email = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      errors.email = 'Please enter a valid email address (e.g. name@company.com)';
+    }
+
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && !/^[6-9]\d{9}$/.test(trimmedPhone)) {
+      errors.phone = 'Phone must be a valid 10-digit Indian mobile number (e.g. 9876543210)';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required';
+    } else if (password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 8) {
-      toast.error('Password must be at least 8 characters long');
+    if (!validateForm()) {
+      toast.error('Please fix the highlighted errors below');
       return;
     }
 
     setLoading(true);
     try {
-      await register(name, email, password, phone);
+      await register(name.trim(), email.trim(), password, phone.trim() || undefined);
       toast.success('Registration successful! Let’s set up your business.');
       navigate('/onboarding');
     } catch (err) {
+      const serverErrors = err.response?.data?.errors;
+      if (serverErrors && typeof serverErrors === 'object') {
+        const mappedErrors = {};
+        for (const [key, val] of Object.entries(serverErrors)) {
+          mappedErrors[key] = Array.isArray(val) ? val[0] : String(val);
+        }
+        setFieldErrors(mappedErrors);
+      }
       toast.error(err.response?.data?.message || err.message || 'Registration failed');
     } finally {
       setLoading(false);
@@ -65,12 +116,16 @@ export default function RegisterPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="bg-white py-8 px-6 shadow-xl shadow-gray-200/50 sm:rounded-2xl sm:px-10 border border-gray-100">
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
             <Input
               label="Full Name"
               required
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              error={fieldErrors.name}
+              onChange={(e) => {
+                setName(e.target.value);
+                clearFieldError('name');
+              }}
               placeholder="e.g. Rithik Kumar"
             />
 
@@ -80,7 +135,11 @@ export default function RegisterPage() {
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              error={fieldErrors.email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                clearFieldError('email');
+              }}
               placeholder="you@example.com"
             />
 
@@ -88,8 +147,13 @@ export default function RegisterPage() {
               label="Phone Number"
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              error={fieldErrors.phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                clearFieldError('phone');
+              }}
               placeholder="e.g. 9876543210"
+              helperText="10-digit mobile number"
             />
 
             <Input
@@ -97,7 +161,11 @@ export default function RegisterPage() {
               type="password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              error={fieldErrors.password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearFieldError('password');
+              }}
               placeholder="••••••••"
             />
 
@@ -106,7 +174,11 @@ export default function RegisterPage() {
               type="password"
               required
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              error={fieldErrors.confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                clearFieldError('confirmPassword');
+              }}
               placeholder="••••••••"
             />
 

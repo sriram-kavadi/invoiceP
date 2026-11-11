@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@sparticuz/chromium": "^131.0.1",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
@@ -28,7 +29,7 @@
     "nodemailer": "^6.9.15",
     "puppeteer": "^23.9.0",
     "puppeteer-core": "^23.9.0",
-    "@sparticuz/chromium": "^131.0.1",
+    "qrcode": "^1.5.4",
     "uuid": "^10.0.0",
     "zod": "^3.23.8"
   },
@@ -37,4 +38,3 @@
     "prisma": "^5.22.0"
   }
 }
-

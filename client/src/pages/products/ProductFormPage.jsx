@@ -13,6 +13,7 @@ export default function ProductFormPage() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [formData, setFormData] = useState({
     name: '',
@@ -46,27 +47,64 @@ export default function ProductFormPage() {
     }
   }, [id, isEdit]);
 
+  const clearFieldError = (field) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
   const handleChange = (field, value) => {
+    clearFieldError(field);
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const validateProduct = () => {
+    const errors = {};
+    if (!formData.name?.trim()) {
+      errors.name = 'Product / Service name is required';
+    }
+
+    const price = parseFloat(formData.sellingPrice);
+    if (formData.sellingPrice === '' || isNaN(price)) {
+      errors.sellingPrice = 'Selling price is required';
+    } else if (price <= 0) {
+      errors.sellingPrice = 'Selling price must be greater than zero';
+    }
+
+    const disc = parseFloat(formData.defaultDiscount);
+    if (!isNaN(disc) && (disc < 0 || disc > 100)) {
+      errors.defaultDiscount = 'Discount percentage must be between 0% and 100%';
+    }
+
+    const hsn = formData.hsnSacCode?.trim();
+    if (hsn && !/^[0-9]{2,8}$/.test(hsn)) {
+      errors.hsnSacCode = 'HSN/SAC code must be between 2 and 8 digits';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error('Product name is required');
+    if (!validateProduct()) {
+      toast.error('Please fix the highlighted errors before saving');
       return;
     }
 
     const price = parseFloat(formData.sellingPrice);
-    if (isNaN(price) || price < 0) {
-      toast.error('Please enter a valid price');
-      return;
-    }
-
     setLoading(true);
     try {
       const payload = {
         ...formData,
+        name: formData.name.trim(),
+        sku: formData.sku?.trim() || undefined,
+        description: formData.description?.trim() || undefined,
+        hsnSacCode: formData.hsnSacCode?.trim() || undefined,
         sellingPrice: price,
         gstRate: Number(formData.gstRate),
         defaultDiscount: Number(formData.defaultDiscount || 0),
@@ -81,6 +119,20 @@ export default function ProductFormPage() {
       }
       navigate('/products');
     } catch (err) {
+      const serverErrors = err.response?.data?.errors;
+      if (Array.isArray(serverErrors)) {
+        const mapped = {};
+        for (const item of serverErrors) {
+          mapped[item.field] = item.message;
+        }
+        setFieldErrors(mapped);
+      } else if (serverErrors && typeof serverErrors === 'object') {
+        const mapped = {};
+        for (const [k, v] of Object.entries(serverErrors)) {
+          mapped[k] = Array.isArray(v) ? v[0] : String(v);
+        }
+        setFieldErrors(mapped);
+      }
       toast.error(err.response?.data?.message || 'Operation failed');
     } finally {
       setLoading(false);
@@ -139,12 +191,14 @@ export default function ProductFormPage() {
               label="Product / Item Name"
               required
               value={formData.name}
+              error={fieldErrors.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="e.g. MOODS DOTTED 3's (MRP Rs.30)"
             />
             <Input
               label="SKU / Item Code"
               value={formData.sku || ''}
+              error={fieldErrors.sku}
               onChange={(e) => handleChange('sku', e.target.value)}
               placeholder="e.g. MOODS-DOT-3"
             />
@@ -167,6 +221,7 @@ export default function ProductFormPage() {
             <Input
               label={formData.isService ? 'SAC Code' : 'HSN Code'}
               value={formData.hsnSacCode || ''}
+              error={fieldErrors.hsnSacCode}
               onChange={(e) => handleChange('hsnSacCode', e.target.value)}
               placeholder={formData.isService ? 'e.g. 998311' : 'e.g. 40141010'}
             />
@@ -194,6 +249,7 @@ export default function ProductFormPage() {
               step="0.01"
               required
               value={formData.sellingPrice}
+              error={fieldErrors.sellingPrice}
               onChange={(e) => handleChange('sellingPrice', e.target.value)}
               placeholder="0.00"
             />
@@ -240,6 +296,7 @@ export default function ProductFormPage() {
               max="100"
               step="0.1"
               value={formData.defaultDiscount}
+              error={fieldErrors.defaultDiscount}
               onChange={(e) => handleChange('defaultDiscount', e.target.value)}
               placeholder="0"
             />
