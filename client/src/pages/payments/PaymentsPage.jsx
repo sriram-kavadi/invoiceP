@@ -89,7 +89,7 @@ export default function PaymentsPage() {
       {/* Payments Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[700px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                 <th className="p-3.5">Payment Date</th>

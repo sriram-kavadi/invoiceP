@@ -145,7 +145,7 @@ export default function ProductFormPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">
             {isEdit ? 'Edit Product / Service' : 'Add Product or Service'}
@@ -154,8 +154,8 @@ export default function ProductFormPage() {
             {isEdit ? 'Update product information and pricing' : 'Save items to reuse in future invoices'}
           </p>
         </div>
-        <Link to="/products">
-          <Button variant="secondary" size="sm">
+        <Link to="/products" className="shrink-0">
+          <Button variant="secondary" size="sm" className="w-full sm:w-auto">
             Cancel
           </Button>
         </Link>
@@ -163,7 +163,7 @@ export default function ProductFormPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs space-y-4">
-          <div className="flex items-center gap-4 mb-2 pb-3 border-b">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-2 pb-3 border-b">
             <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700">
               <input
                 type="radio"
@@ -303,13 +303,13 @@ export default function ProductFormPage() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <Link to="/products">
-            <Button variant="secondary" disabled={loading}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-4">
+          <Link to="/products" className="w-full sm:w-auto">
+            <Button variant="secondary" disabled={loading} className="w-full">
               Cancel
             </Button>
           </Link>
-          <Button type="submit" loading={loading}>
+          <Button type="submit" loading={loading} className="w-full sm:w-auto">
             {isEdit ? 'Save Changes' : 'Save Product'}
           </Button>
         </div>

@@ -336,9 +336,9 @@ export default function OnboardingPage() {
             )}
 
             {/* Footer Navigation Buttons */}
-            <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-6 border-t border-gray-100">
               {step > 1 ? (
-                <Button variant="secondary" onClick={handleBack} disabled={loading}>
+                <Button variant="secondary" onClick={handleBack} disabled={loading} className="w-full sm:w-auto">
                   Back
                 </Button>
               ) : (
@@ -346,11 +346,11 @@ export default function OnboardingPage() {
               )}
 
               {step < 3 ? (
-                <Button onClick={handleNext}>
+                <Button onClick={handleNext} className="w-full sm:w-auto">
                   Next Step →
                 </Button>
               ) : (
-                <Button type="submit" loading={loading}>
+                <Button type="submit" loading={loading} className="w-full sm:w-auto">
                   Complete Setup & Open Dashboard
                 </Button>
               )}

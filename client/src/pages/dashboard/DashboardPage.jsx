@@ -58,15 +58,15 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {/* Period selector tabs */}
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm overflow-x-auto max-w-full">
             {periods.map((p) => (
               <button
                 key={p.value}
                 type="button"
                 onClick={() => setPeriod(p.value)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                className={`px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${
                   period === p.value
                     ? 'bg-primary-600 text-white shadow-xs'
                     : 'text-gray-600 hover:text-gray-900'
@@ -77,7 +77,7 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <Link to="/invoices/create">
+          <Link to="/invoices/create" className="shrink-0">
             <Button icon={Plus} size="sm">
               Create Invoice
             </Button>
@@ -86,7 +86,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Sales */}
         <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-xs">
           <div className="flex items-center justify-between text-gray-400 mb-2">
@@ -283,7 +283,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[680px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                 <th className="p-3.5">Invoice #</th>

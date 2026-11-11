@@ -88,7 +88,7 @@ export default function BankSettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Bank Accounts</h1>
           <p className="text-xs text-gray-500">
@@ -96,7 +96,7 @@ export default function BankSettingsPage() {
           </p>
         </div>
 
-        <Button icon={Plus} size="sm" onClick={() => setShowAddModal(true)}>
+        <Button icon={Plus} size="sm" onClick={() => setShowAddModal(true)} className="w-full sm:w-auto">
           Add Bank Account
         </Button>
       </div>
@@ -213,11 +213,11 @@ export default function BankSettingsPage() {
             <span className="text-xs font-semibold text-gray-800">Set as default account</span>
           </label>
 
-          <div className="flex justify-end gap-2 pt-3 border-t">
-            <Button variant="secondary" onClick={() => setShowAddModal(false)} disabled={adding}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t">
+            <Button variant="secondary" onClick={() => setShowAddModal(false)} disabled={adding} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" loading={adding}>
+            <Button type="submit" loading={adding} className="w-full sm:w-auto">
               Save Account
             </Button>
           </div>

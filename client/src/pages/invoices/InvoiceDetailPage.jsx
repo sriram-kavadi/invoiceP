@@ -158,7 +158,7 @@ export default function InvoiceDetailPage() {
   return (
     <div className="space-y-6">
       {/* Action Header - Hidden on print */}
-      <div className="print:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-xs">
+      <div className="print:hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-3 sm:p-4 rounded-xl border border-gray-100 shadow-xs">
         <div className="flex items-center gap-3">
           <Link to="/invoices" className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
             <ArrowLeft className="w-5 h-5" />
@@ -242,8 +242,10 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* Invoice Document Preview */}
-      <div className="bg-gray-200/50 p-4 sm:p-8 rounded-2xl print:bg-white print:p-0">
-        <InvoicePreview invoiceData={invoiceData} />
+      <div className="bg-gray-200/50 p-2 sm:p-8 rounded-2xl print:bg-white print:p-0 overflow-x-auto">
+        <div className="min-w-[680px] sm:min-w-0">
+          <InvoicePreview invoiceData={invoiceData} />
+        </div>
       </div>
 
       {/* Payment History & Audit Logs - Hidden on print */}

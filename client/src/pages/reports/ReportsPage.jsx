@@ -182,12 +182,12 @@ export default function ReportsPage() {
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2 max-w-full">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-xs overflow-x-auto max-w-full">
             <button
               type="button"
               onClick={() => setActiveTab('analytics')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-2 transition-colors ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-2 transition-colors whitespace-nowrap ${
                 activeTab === 'analytics'
                   ? 'bg-primary-600 text-white shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
@@ -199,7 +199,7 @@ export default function ReportsPage() {
             <button
               type="button"
               onClick={() => setActiveTab('sales')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-2 transition-colors ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-md flex items-center gap-2 transition-colors whitespace-nowrap ${
                 activeTab === 'sales'
                   ? 'bg-primary-600 text-white shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
@@ -221,13 +221,13 @@ export default function ReportsPage() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mr-1">
                 Period:
               </span>
-              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 overflow-x-auto max-w-full">
                 {periodTabs.map((p) => (
                   <button
                     key={p.value}
                     type="button"
                     onClick={() => setAnalyticsPeriod(p.value)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                       analyticsPeriod === p.value
                         ? 'bg-white text-gray-900 font-bold shadow-xs'
                         : 'text-gray-600 hover:text-gray-900'
@@ -242,7 +242,7 @@ export default function ReportsPage() {
               {analyticsPeriod === 'CUSTOM' && (
                 <form
                   onSubmit={handleApplyCustomAnalytics}
-                  className="flex items-center gap-2 ml-2"
+                  className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0 sm:ml-2"
                 >
                   <input
                     type="date"
@@ -266,7 +266,7 @@ export default function ReportsPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -587,7 +587,7 @@ export default function ReportsPage() {
               </div>
 
               <div className="overflow-x-auto flex-1">
-                <table className="w-full text-left border-collapse text-xs">
+                <table className="w-full min-w-[420px] text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                       <th className="p-3">Product</th>
@@ -642,7 +642,7 @@ export default function ReportsPage() {
               </div>
 
               <div className="overflow-x-auto flex-1">
-                <table className="w-full text-left border-collapse text-xs">
+                <table className="w-full min-w-[420px] text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                       <th className="p-3">Customer</th>
@@ -803,7 +803,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full min-w-[750px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                     <th className="p-3.5">Invoice #</th>

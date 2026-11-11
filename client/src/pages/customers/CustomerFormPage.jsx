@@ -187,7 +187,7 @@ export default function CustomerFormPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">
             {isEdit ? 'Edit Customer' : 'Add New Customer'}
@@ -196,8 +196,8 @@ export default function CustomerFormPage() {
             {isEdit ? 'Update details for this customer' : 'Save client info for quick invoice generation'}
           </p>
         </div>
-        <Link to="/customers">
-          <Button variant="secondary" size="sm">
+        <Link to="/customers" className="shrink-0">
+          <Button variant="secondary" size="sm" className="w-full sm:w-auto">
             Cancel
           </Button>
         </Link>
@@ -397,13 +397,13 @@ export default function CustomerFormPage() {
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-4">
-          <Link to="/customers">
-            <Button variant="secondary" disabled={loading}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-4">
+          <Link to="/customers" className="w-full sm:w-auto">
+            <Button variant="secondary" disabled={loading} className="w-full">
               Cancel
             </Button>
           </Link>
-          <Button type="submit" loading={loading}>
+          <Button type="submit" loading={loading} className="w-full sm:w-auto">
             {isEdit ? 'Save Changes' : 'Create Customer'}
           </Button>
         </div>

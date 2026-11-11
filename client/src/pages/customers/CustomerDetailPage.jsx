@@ -48,9 +48,9 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link to="/customers" className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+          <Link to="/customers" className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 min-h-[40px] min-w-[40px] flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -61,7 +61,7 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Link to={`/customers/${id}/edit`}>
             <Button variant="secondary" size="sm" icon={Edit2}>
               Edit Details
@@ -115,7 +115,7 @@ export default function CustomerDetailPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[700px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                 <th className="p-3.5">Invoice #</th>

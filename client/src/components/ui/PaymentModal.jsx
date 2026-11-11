@@ -135,11 +135,11 @@ export default function PaymentModal({
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
-          <Button variant="secondary" onClick={onClose} disabled={loading}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-3 border-t border-gray-100">
+          <Button variant="secondary" onClick={onClose} disabled={loading} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button type="submit" loading={loading}>
+          <Button type="submit" loading={loading} className="w-full sm:w-auto">
             Save Payment
           </Button>
         </div>

@@ -165,7 +165,7 @@ export default function InvoiceSettingsPage() {
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button type="submit" loading={loading} size="lg">
+          <Button type="submit" loading={loading} size="lg" className="w-full sm:w-auto">
             Save Preferences
           </Button>
         </div>

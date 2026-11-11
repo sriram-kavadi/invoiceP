@@ -81,9 +81,9 @@ export default function DashboardLayout({ children }) {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col md:pl-64 bg-gray-50 overflow-hidden sidebar-layout-container">
+    <div className="h-[100dvh] w-full flex flex-col md:pl-64 bg-gray-50 overflow-hidden sidebar-layout-container">
       {/* Mobile top bar */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0 z-40 shadow-sm">
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between flex-shrink-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white font-bold text-sm shadow">
             IH
@@ -93,7 +93,7 @@ export default function DashboardLayout({ children }) {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="text-gray-500 hover:text-gray-700 p-1 rounded-md focus:outline-none"
+          className="text-gray-600 hover:text-gray-900 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg hover:bg-gray-100 focus:outline-none transition-colors"
           aria-label="Toggle Navigation"
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -131,7 +131,8 @@ export default function DashboardLayout({ children }) {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+            className="md:hidden text-gray-400 hover:text-gray-600 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Close Navigation"
           >
             <X className="w-5 h-5" />
           </button>
@@ -219,7 +220,8 @@ export default function DashboardLayout({ children }) {
             type="button"
             onClick={logout}
             title="Log out"
-            className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-white transition-colors"
+            className="text-gray-400 hover:text-red-600 p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg hover:bg-white transition-colors"
+            aria-label="Log out"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -227,8 +229,8 @@ export default function DashboardLayout({ children }) {
       </aside>
 
       {/* Main Content Area - Independently scrollable */}
-      <main className="flex-1 w-full h-[calc(100vh-57px)] md:h-screen overflow-y-auto overscroll-contain min-w-0 flex flex-col bg-gray-50">
-        <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 w-full h-[calc(100dvh-57px)] md:h-screen overflow-y-auto overscroll-contain min-w-0 flex flex-col bg-gray-50">
+        <div className="flex-1 p-3 sm:p-5 md:p-8 max-w-7xl mx-auto w-full">
           {children || <Outlet />}
         </div>
       </main>

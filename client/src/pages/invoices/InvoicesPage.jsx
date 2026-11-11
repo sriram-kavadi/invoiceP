@@ -199,7 +199,7 @@ export default function InvoicesPage() {
       {/* Invoices Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[750px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                 <th className="p-3.5">Invoice #</th>
@@ -261,7 +261,7 @@ export default function InvoicesPage() {
                         <Link
                           to={`/invoices/${inv.id}`}
                           title="View Invoice"
-                          className="p-1.5 text-gray-400 hover:text-primary-600 rounded hover:bg-gray-100"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
@@ -270,7 +270,7 @@ export default function InvoicesPage() {
                           type="button"
                           onClick={() => handleDownloadPdf(inv.id, inv.invoiceNumber)}
                           title="Download PDF"
-                          className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-gray-100"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-blue-600 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <Download className="w-4 h-4" />
                         </button>
@@ -280,7 +280,7 @@ export default function InvoicesPage() {
                             type="button"
                             onClick={() => setSelectedInvoiceForPayment(inv)}
                             title="Record Payment"
-                            className="p-1.5 text-gray-400 hover:text-green-600 rounded hover:bg-gray-100"
+                            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-green-600 rounded-lg hover:bg-gray-100 transition-colors"
                           >
                             <CreditCard className="w-4 h-4" />
                           </button>
@@ -290,7 +290,7 @@ export default function InvoicesPage() {
                           type="button"
                           onClick={() => handleDuplicate(inv.id)}
                           title="Duplicate Invoice"
-                          className="p-1.5 text-gray-400 hover:text-purple-600 rounded hover:bg-gray-100"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-purple-600 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <Copy className="w-4 h-4" />
                         </button>
@@ -300,7 +300,7 @@ export default function InvoicesPage() {
                             type="button"
                             onClick={() => setCancelModalInvoice(inv)}
                             title="Cancel Invoice"
-                            className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100"
+                            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
                           >
                             <XCircle className="w-4 h-4" />
                           </button>
@@ -365,15 +365,16 @@ export default function InvoicesPage() {
                 className="w-full rounded-lg border border-gray-300 p-2.5 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
               <Button
                 variant="secondary"
                 onClick={() => setCancelModalInvoice(null)}
                 disabled={cancelling}
+                className="w-full sm:w-auto"
               >
                 Go Back
               </Button>
-              <Button type="submit" variant="danger" loading={cancelling}>
+              <Button type="submit" variant="danger" loading={cancelling} className="w-full sm:w-auto">
                 Confirm Cancellation
               </Button>
             </div>

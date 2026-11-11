@@ -91,7 +91,7 @@ export default function CustomersPage() {
       {/* Customers Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[680px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                 <th className="p-3.5">Customer / Company</th>
@@ -135,14 +135,14 @@ export default function CustomersPage() {
                         <Link
                           to={`/customers/${c.id}`}
                           title="View Details"
-                          className="p-1.5 text-gray-400 hover:text-primary-600 rounded hover:bg-gray-100"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-primary-600 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
                         <Link
                           to={`/customers/${c.id}/edit`}
                           title="Edit Customer"
-                          className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-gray-100"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-blue-600 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
                         </Link>
@@ -150,7 +150,7 @@ export default function CustomersPage() {
                           type="button"
                           onClick={() => handleDelete(c.id, c.name)}
                           title="Delete Customer"
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

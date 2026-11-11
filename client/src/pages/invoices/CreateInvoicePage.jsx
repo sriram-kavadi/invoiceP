@@ -356,7 +356,7 @@ export default function CreateInvoicePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
@@ -419,7 +419,7 @@ export default function CreateInvoicePage() {
             </div>
 
             {invoiceType === 'GST' && (
-              <div className="flex items-center gap-4 text-xs font-semibold text-gray-700 pt-1">
+              <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-gray-700 pt-1">
                 <span className="text-gray-400 font-bold uppercase text-[10px]">GST Treatment:</span>
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
@@ -887,8 +887,10 @@ export default function CreateInvoicePage() {
         title="Official Invoice Preview (A4 Printable Format)"
         size="full"
       >
-        <div className="p-2 overflow-x-auto bg-gray-100 rounded-lg">
-          <InvoicePreview invoiceData={previewInvoiceData} />
+        <div className="p-1 sm:p-2 overflow-x-auto bg-gray-100 rounded-lg">
+          <div className="min-w-[680px] sm:min-w-0">
+            <InvoicePreview invoiceData={previewInvoiceData} />
+          </div>
         </div>
       </Modal>
 
@@ -926,11 +928,11 @@ export default function CreateInvoicePage() {
             onChange={(e) => setNewCustAddress(e.target.value)}
             placeholder="Complete address"
           />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setShowNewCustomerModal(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowNewCustomerModal(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="w-full sm:w-auto">
               Save Customer
             </Button>
           </div>

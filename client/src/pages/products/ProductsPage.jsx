@@ -78,7 +78,7 @@ export default function ProductsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button variant="secondary" size="sm" icon={Download} onClick={handleExport}>
             Export Excel
           </Button>
@@ -112,7 +112,7 @@ export default function ProductsPage() {
       {/* Products Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[700px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 uppercase font-semibold">
                 <th className="p-3.5">Product / Service</th>
@@ -162,7 +162,7 @@ export default function ProductsPage() {
                         <Link
                           to={`/products/${p.id}/edit`}
                           title="Edit Product"
-                          className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-gray-100"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-blue-600 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
                         </Link>
@@ -170,7 +170,7 @@ export default function ProductsPage() {
                           type="button"
                           onClick={() => handleDelete(p.id, p.name)}
                           title="Delete Product"
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-gray-100"
+                          className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

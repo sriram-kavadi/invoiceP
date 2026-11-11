@@ -180,9 +180,9 @@ export default function EditInvoicePage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-3">
-          <Link to={`/invoices/${id}`} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+          <Link to={`/invoices/${id}`} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 min-h-[40px] min-w-[40px] flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -191,7 +191,7 @@ export default function EditInvoicePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link to={`/invoices/${id}`}>
             <Button variant="secondary" size="sm">Cancel</Button>
           </Link>
@@ -267,8 +267,14 @@ export default function EditInvoicePage() {
                     {it.amount.toFixed(2)}
                   </div>
                 </div>
-                <div className="flex items-end justify-center pb-1">
-                  <button type="button" onClick={() => handleRemoveRow(idx)} className="text-red-500 hover:text-red-700 p-1">
+                <div className="flex items-center justify-end sm:justify-center sm:items-end pb-1">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRow(idx)}
+                    className="text-red-500 hover:text-red-700 p-2 min-h-[38px] min-w-[38px] flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors"
+                    title="Remove item"
+                    aria-label="Remove item"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

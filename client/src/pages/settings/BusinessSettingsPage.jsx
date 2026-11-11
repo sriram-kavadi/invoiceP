@@ -616,7 +616,7 @@ export default function BusinessSettingsPage() {
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button type="submit" loading={loading} size="lg">
+          <Button type="submit" loading={loading} size="lg" className="w-full sm:w-auto">
             Save Business Profile
           </Button>
         </div>
