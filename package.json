@@ -44,6 +44,7 @@
     "prisma": "^5.22.0"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.24.0"
+    "@rollup/rollup-linux-x64-gnu": "^4.68.0",
+    "@rollup/rollup-linux-x64-musl": "^4.68.0"
   }
 }
