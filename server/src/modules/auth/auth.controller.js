@@ -122,7 +122,7 @@ export async function register(req, res) {
       return res.status(err.status).json({ success: false, message: err.message });
     }
     console.error('[Auth] register error:', err);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: err.message || 'Internal server error' });
   }
 }
 
@@ -185,7 +185,7 @@ export async function login(req, res) {
     });
   } catch (err) {
     console.error('[Auth] login error:', err);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: err.message || 'Internal server error' });
   }
 }
 

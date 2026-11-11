@@ -25,6 +25,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust reverse proxy (Vercel)
+app.set('trust proxy', 1);
+
 // Performance timing (before all other middleware)
 app.use(timingMiddleware);
 
